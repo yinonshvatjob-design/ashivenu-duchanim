@@ -2906,13 +2906,15 @@
 
     // --- 10. INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', async () => {
-      await loadStateFromServer();
-
       const savedSessionUser = sessionStorage.getItem('ashivenu_v2_logged_user');
-      if (savedSessionUser) {
+      if (savedSessionUser && authToken) {
+        await loadStateFromServer();
         currentUser = JSON.parse(savedSessionUser);
         applyUserRolePermissions();
         document.getElementById('login-screen-overlay').classList.add('hidden');
+      } else {
+        sessionStorage.removeItem('ashivenu_v2_logged_user');
+        sessionStorage.removeItem('ashivenu_v2_token');
       }
 
       populateAllStandSelects();
