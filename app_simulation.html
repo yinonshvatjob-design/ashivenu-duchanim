@@ -2584,40 +2584,63 @@
 
 
     // --- 8. AUTHENTICATION, ROLES & ADMIN USERS MANAGEMENT (PAGE 6) ---
-    let usersData = [
-      { id: 1, username: 'yinonshvat', email: 'yinonshvat@hashivenu.org', password: '203084637', fullName: 'ינון שבט', role: 'admin', phone: '', region: 'מנהל תוכנה ראשי', active: true },
-      { id: 2, username: 'אורית', email: 'orit@hashivenu.org', password: '0587993161', fullName: 'אורית', role: 'coordinator', phone: '058-7993161', region: 'רכזת פעילות', active: true }
-    ];
-
+    let usersData = [];
     let currentUser = null;
+    let authToken = sessionStorage.getItem('ashivenu_v2_token') || '';
 
     async function performLogin() {
-      const identifier = document.getElementById('login-identifier').value.trim().toLowerCase();
+      const identifier = document.getElementById('login-identifier').value.trim();
       const password = document.getElementById('login-password').value.trim();
       const errBox = document.getElementById('login-error-box');
       errBox.classList.add('hidden');
 
-      let matched = usersData.find(u =>
-        u.active !== false &&
-        (u.username.toLowerCase() === identifier || (u.email && u.email.toLowerCase() === identifier) || (u.fullName && u.fullName.toLowerCase() === identifier)) &&
-        u.password === password
-      );
-
-      if (!matched) {
-        errBox.innerText = 'שם משתמש או סיסמה שגויים. נסה שוב.';
+      if (!identifier || !password) {
+        errBox.innerText = 'אנא הזן שם משתמש וסיסמה.';
         errBox.classList.remove('hidden');
         return;
       }
 
-      currentUser = matched;
-      sessionStorage.setItem('ashivenu_v2_logged_user', JSON.stringify(currentUser));
-      applyUserRolePermissions();
-      document.getElementById('login-screen-overlay').classList.add('hidden');
+      try {
+        const res = await fetch('/api/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'login', identifier, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          errBox.innerText = data.error || 'שם משתמש או סיסמה שגויים. נסה שוב.';
+          errBox.classList.remove('hidden');
+          return;
+        }
+
+        authToken = data.token;
+        currentUser = data.user;
+        sessionStorage.setItem('ashivenu_v2_token', authToken);
+        sessionStorage.setItem('ashivenu_v2_logged_user', JSON.stringify(currentUser));
+
+        await loadStateFromServer();
+        populateAllStandSelects();
+        initWeeksNavigator();
+        renderActivistsAccordion();
+        renderStandsRoster();
+        renderReflections();
+        renderLeads();
+        renderAdminUsers();
+
+        applyUserRolePermissions();
+        document.getElementById('login-screen-overlay').classList.add('hidden');
+      } catch (e) {
+        errBox.innerText = 'שגיאת תקשורת מול השרת. נסה שוב.';
+        errBox.classList.remove('hidden');
+      }
     }
 
     function performLogout() {
       currentUser = null;
+      authToken = '';
       sessionStorage.removeItem('ashivenu_v2_logged_user');
+      sessionStorage.removeItem('ashivenu_v2_token');
       document.getElementById('login-identifier').value = '';
       document.getElementById('login-password').value = '';
       document.getElementById('login-screen-overlay').classList.remove('hidden');
@@ -2802,9 +2825,11 @@
       try {
         localStorage.setItem('ashivenu_v2_app_data', JSON.stringify(appData));
         localStorage.setItem('ashivenu_v2_users_data', JSON.stringify(usersData));
+        const headers = { 'Content-Type': 'application/json' };
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
         await fetch('/api/state', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ appData, users: usersData })
         });
       } catch (e) {
@@ -2819,9 +2844,14 @@
         localStorage.removeItem('ashivenu_users_data');
         sessionStorage.removeItem('ashivenu_logged_user');
 
-        const res = await fetch('/api/state');
+        if (!authToken) return;
+
+        const res = await fetch('/api/state', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
         if (res.ok) {
           const data = await res.json();
+          if (data.requiresAuth) return;
           if (data.users && data.users.length > 0) {
             usersData = data.users;
           }
