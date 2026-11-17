@@ -114,7 +114,7 @@
         <button onclick="switchPage('stands')" id="tab-stands" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
           <span>📋</span>
           <span>3. שיבוץ שבועי</span>
-          <span id="header-week-pill" class="bg-blue-500/20 text-blue-300 text-[10px] px-1.5 py-0.2 rounded-full">פרשת לך לך</span>
+          <span id="header-week-pill" class="bg-blue-500/20 text-blue-300 text-[10px] px-1.5 py-0.2 rounded-full">פרשת ויצא</span>
         </button>
 
         <button onclick="switchPage('reflections')" id="tab-reflections" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
@@ -1008,29 +1008,29 @@
     // Expanded accordion state (activist IDs)
     let openAccordionIds = new Set([1]); // First activist open by default
 
-    // Weeks Array: 2 months back (8 weeks) + current + 2 months forward (8 weeks) strictly by Torah Portions (פרשות השבוע)
+    // Weeks Array: 2 months back (8 weeks) + current (Vayetze) + 2 months forward (8 weeks)
     const weeksList = [
-      { id: 'w-prev-8', parasha: 'פרשת שופטים', name: 'פרשת שופטים (ה\' אלול)', date: 'ה\' אלול • 03/09', label: 'לפני חודשיים', status: 'הושלם בעבר' },
-      { id: 'w-prev-7', parasha: 'פרשת כי תצא', name: 'פרשת כי תצא (י"ב אלול)', date: 'י"ב אלול • 10/09', label: 'לפני 7 שבועות', status: 'הושלם בעבר' },
-      { id: 'w-prev-6', parasha: 'פרשת כי תבוא', name: 'פרשת כי תבוא (י"ט אלול)', date: 'י"ט אלול • 17/09', label: 'לפני 6 שבועות', status: 'הושלם בעבר' },
-      { id: 'w-prev-5', parasha: 'פרשת נצבים-וילך', name: 'פרשת נצבים-וילך (כ"ו אלול)', date: 'כ"ו אלול • 24/09', label: 'לפני 5 שבועות', status: 'הושלם בעבר' },
-      { id: 'w-prev-4', parasha: 'פרשת האזינו', name: 'פרשת האזינו • שבת שובה (ד\' תשרי)', date: 'ד\' תשרי • 01/10', label: 'עשרת ימי תשובה', status: 'הושלם בעבר' },
-      { id: 'w-prev-3', parasha: 'חול המועד סוכות', name: 'חול המועד סוכות (י"ד תשרי)', date: 'י"ד תשרי • 08/10', label: 'ערב חג סוכות', status: 'הושלם בעבר' },
-      { id: 'w-prev-2', parasha: 'פרשת בראשית', name: 'פרשת בראשית (כ"א תשרי)', date: 'כ"א תשרי • 15/10', label: 'לפני שבועיים', status: 'הושלם בעבר' },
-      { id: 'w-prev-1', parasha: 'פרשת נח', name: 'פרשת נח (כ"ח תשרי)', date: 'כ"ח תשרי • 22/10', label: 'שבוע שעבר', status: 'הושלם בעבר' },
+      { id: 'w-prev-8', parasha: 'פרשת האזינו', name: 'פרשת האזינו • שבת שובה (ד\' תשרי)', date: 'ד\' תשרי • 24/09', label: 'לפני חודשיים', status: 'הושלם בעבר' },
+      { id: 'w-prev-7', parasha: 'חול המועד סוכות', name: 'חול המועד סוכות (י"ד תשרי)', date: 'י"ד תשרי • 01/10', label: 'לפני 7 שבועות', status: 'הושלם בעבר' },
+      { id: 'w-prev-6', parasha: 'פרשת בראשית', name: 'פרשת בראשית (כ"א תשרי)', date: 'כ"א תשרי • 08/10', label: 'לפני 6 שבועות', status: 'הושלם בעבר' },
+      { id: 'w-prev-5', parasha: 'פרשת נח', name: 'פרשת נח (כ"ח תשרי)', date: 'כ"ח תשרי • 15/10', label: 'לפני 5 שבועות', status: 'הושלם בעבר' },
+      { id: 'w-prev-4', parasha: 'פרשת לך לך', name: 'פרשת לך לך (ה\' חשוון)', date: 'ה\' חשוון • 22/10', label: 'לפני חודש', status: 'הושלם בעבר' },
+      { id: 'w-prev-3', parasha: 'פרשת וירא', name: 'פרשת וירא (י"ב חשוון)', date: 'י"ב חשוון • 29/10', label: 'לפני 3 שבועות', status: 'הושלם בעבר' },
+      { id: 'w-prev-2', parasha: 'פרשת חיי שרה', name: 'פרשת חיי שרה (י"ט חשוון)', date: 'י"ט חשוון • 05/11', label: 'לפני שבועיים', status: 'הושלם בעבר' },
+      { id: 'w-prev-1', parasha: 'פרשת תולדות', name: 'פרשת תולדות (כ"ו חשוון)', date: 'כ"ו חשוון • 12/11', label: 'שבוע שעבר (נתוני המסמך)', status: 'הושלם בעבר' },
       
       // Current Week (Default)
-      { id: 'w-current', parasha: 'פרשת לך לך', name: 'פרשת לך לך (ה\' חשוון)', date: 'ה\' חשוון • 29/10', label: 'חמישי הקרוב • נוכחי', status: 'פעילות סגורה' },
+      { id: 'w-current', parasha: 'פרשת ויצא', name: 'פרשת ויצא (ג\' כסלו)', date: 'ג\' כסלו • 19/11', label: 'חמישי הקרוב • נוכחי', status: 'תכנון פעיל' },
 
       // Future Weeks (Up to 2 months forward)
-      { id: 'w-next-1', parasha: 'פרשת וירא', name: 'פרשת וירא (י"ב חשוון)', date: 'י"ב חשוון • 05/11', label: 'עוד שבוע', status: 'תכנון פתוח' },
-      { id: 'w-next-2', parasha: 'פרשת חיי שרה', name: 'פרשת חיי שרה (י"ט חשוון)', date: 'י"ט חשוון • 12/11', label: 'עוד שבועיים', status: 'תכנון פתוח' },
-      { id: 'w-next-3', parasha: 'פרשת תולדות', name: 'פרשת תולדות (כ"ו חשוון)', date: 'כ"ו חשוון • 19/11', label: 'עוד 3 שבועות', status: 'תכנון פתוח' },
-      { id: 'w-next-4', parasha: 'פרשת ויצא', name: 'פרשת ויצא (ד\' כסלו)', date: 'ד\' כסלו • 26/11', label: 'עוד חודש', status: 'תכנון פתוח' },
-      { id: 'w-next-5', parasha: 'פרשת וישלח', name: 'פרשת וישלח (י"א כסלו)', date: 'י"א כסלו • 03/12', label: 'עוד 5 שבועות', status: 'תכנון פתוח' },
-      { id: 'w-next-6', parasha: 'פרשת וישב', name: 'פרשת וישב (י"ח כסלו)', date: 'י"ח כסלו • 10/12', label: 'עוד 6 שבועות', status: 'תכנון פתוח' },
-      { id: 'w-next-7', parasha: 'פרשת מקץ', name: 'פרשת מקץ • חנוכה (כ"ה כסלו)', date: 'כ"ה כסלו • 17/12', label: 'נר ראשון חנוכה', status: 'תכנון פתוח' },
-      { id: 'w-next-8', parasha: 'פרשת ויגש', name: 'פרשת ויגש (ב\' טבת)', date: 'ב\' טבת • 24/12', label: 'עוד חודשיים', status: 'תכנון פתוח' }
+      { id: 'w-next-1', parasha: 'פרשת וישלח', name: 'פרשת וישלח (י\' כסלו)', date: 'י\' כסלו • 26/11', label: 'עוד שבוע', status: 'תכנון פתוח' },
+      { id: 'w-next-2', parasha: 'פרשת וישב', name: 'פרשת וישב (י"ז כסלו)', date: 'י"ז כסלו • 03/12', label: 'עוד שבועיים', status: 'תכנון פתוח' },
+      { id: 'w-next-3', parasha: 'פרשת מקץ', name: 'פרשת מקץ • חנוכה (כ"ד כסלו)', date: 'כ"ד כסלו • 10/12', label: 'עוד 3 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-next-4', parasha: 'פרשת ויגש', name: 'פרשת ויגש (ב\' טבת)', date: 'ב\' טבת • 17/12', label: 'עוד חודש', status: 'תכנון פתוח' },
+      { id: 'w-next-5', parasha: 'פרשת ויחי', name: 'פרשת ויחי (ט\' טבת)', date: 'ט\' טבת • 24/12', label: 'עוד 5 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-next-6', parasha: 'פרשת שמות', name: 'פרשת שמות (ט"ז טבת)', date: 'ט"ז טבת • 31/12', label: 'עוד 6 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-next-7', parasha: 'פרשת וארא', name: 'פרשת וארא (כ"ג טבת)', date: 'כ"ג טבת • 07/01', label: 'עוד 7 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-next-8', parasha: 'פרשת בא', name: 'פרשת בא (א\' שבט)', date: 'א\' שבט • 14/01', label: 'עוד חודשיים', status: 'תכנון פתוח' }
     ];
 
     let currentWeekIndex = 8; // Points to 'w-current'
@@ -2534,6 +2534,31 @@
     }
 
 
+    function populateAllStandSelects() {
+      const standOptions = standsData.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+
+      const editActStand = document.getElementById('edit-act-preferred-stand');
+      if (editActStand) {
+        editActStand.innerHTML = `<option value="">ללא עמדה קבועה (פנוי לפי צורך)</option>` + standOptions;
+      }
+
+      const refFilterStand = document.getElementById('reflection-filter-stand');
+      if (refFilterStand) {
+        refFilterStand.innerHTML = `<option value="all">כל העמדות (${standsData.length})</option>` + standOptions;
+      }
+
+      const modalRefStand = document.getElementById('modal-ref-stand');
+      if (modalRefStand) {
+        modalRefStand.innerHTML = standOptions;
+      }
+
+      const leadStand = document.getElementById('lead-stand');
+      if (leadStand) {
+        leadStand.innerHTML = standOptions;
+      }
+    }
+
+
     // --- 10. INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', async () => {
       await loadStateFromServer();
@@ -2545,6 +2570,7 @@
         document.getElementById('login-screen-overlay').classList.add('hidden');
       }
 
+      populateAllStandSelects();
       initWeeksNavigator();
       renderActivistsAccordion();
       renderStandsRoster();
