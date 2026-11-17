@@ -190,22 +190,29 @@
         </div>
       </div>
 
-      <!-- Segment Tabs: פעילים קיימים vs פוטנציאליים -->
-      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+      <!-- Segment Tabs: פעילים קיימים vs פוטנציאליים + סינון מגדר -->
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-2">
         <div class="flex items-center gap-2">
           <button onclick="setActivistCategory('existing')" id="btn-cat-existing" class="cat-pill font-bold text-xs px-4 py-2 rounded-xl bg-slate-900 text-white transition shadow-xs flex items-center gap-1.5">
             <span>פעילים קיימים וקבועים</span>
-            <span id="badge-existing-count" class="bg-white/20 text-white px-2 py-0.5 rounded-full text-[10px]">12</span>
+            <span id="badge-existing-count" class="bg-white/20 text-white px-2 py-0.5 rounded-full text-[10px]">0</span>
           </button>
 
           <button onclick="setActivistCategory('potential')" id="btn-cat-potential" class="cat-pill font-semibold text-xs px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1.5">
             <span>פוטנציאליים וחדשים בתהליך</span>
-            <span id="badge-potential-count" class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-bold">6</span>
+            <span id="badge-potential-count" class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-bold">0</span>
           </button>
         </div>
 
-        <div class="text-xs text-slate-500">
-          סה"כ במאגר: <strong id="total-activists-stat" class="text-slate-800 font-bold">18</strong> פעילים
+        <div class="flex items-center gap-3">
+          <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+            <button onclick="setActivistGenderFilter('all')" id="btn-gender-all" class="px-2.5 py-1 rounded-lg font-bold bg-white text-slate-900 shadow-xs transition">הכל</button>
+            <button onclick="setActivistGenderFilter('male')" id="btn-gender-male" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">👨 גברים</button>
+            <button onclick="setActivistGenderFilter('female')" id="btn-gender-female" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">👩 נשים</button>
+          </div>
+          <div class="text-xs text-slate-500">
+            סה"כ: <strong id="total-activists-stat" class="text-slate-800 font-bold">0</strong>
+          </div>
         </div>
       </div>
 
@@ -248,8 +255,8 @@
         <!-- Live Side List -->
         <div class="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col h-full shadow-xs">
           <div class="font-bold text-xs text-slate-700 pb-2 border-b border-slate-100 flex items-center justify-between">
-            <span>רשימת עמדות בירושלים</span>
-            <span class="text-[10px] text-slate-400">לחץ למיקוד ושיבוץ</span>
+            <span>רשימת עמדות ומוקדים</span>
+            <span class="text-[10px] text-slate-400">עריכה, מיקוד ושיבוץ</span>
           </div>
 
           <div id="map-stand-list" class="space-y-2 mt-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
@@ -259,6 +266,13 @@
 
         <!-- Interactive Leaflet Map Container -->
         <div class="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 p-1.5 h-full relative shadow-xs">
+          <!-- Floating Pick-Location Banner -->
+          <div id="map-pick-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[400] bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border-2 border-amber-400 flex items-center gap-3 text-xs">
+            <span class="animate-bounce text-base">📍</span>
+            <span>לחץ על הנקודה הרצויה במפה כדי לעדכן את המיקום של <strong id="map-pick-stand-name" class="text-amber-300"></strong></span>
+            <button onclick="cancelMapLocationPick()" class="bg-red-500 hover:bg-red-600 text-white font-bold px-2.5 py-1 rounded-lg text-[11px]">ביטול</button>
+          </div>
+
           <div id="leaflet-map" class="w-full h-full rounded-xl z-0"></div>
 
           <!-- Floating Map Legend -->
@@ -266,7 +280,7 @@
             <div class="font-bold text-slate-800 text-[11px] border-b border-slate-100 pb-1">מקרא עמדות ומצב איוש</div>
             <div class="flex items-center gap-2 text-slate-600">
               <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span>מאוישת במלואה + מפקד עמדה</span>
+              <span>מאוישת במלואה + אחראי/ת עמדה</span>
             </div>
             <div class="flex items-center gap-2 text-slate-600">
               <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
@@ -627,10 +641,17 @@
 
       <div class="space-y-3.5 text-xs">
         
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-3 gap-3">
           <div>
             <label class="block font-bold text-slate-700 mb-1">שם מלא *</label>
             <input type="text" id="edit-act-name" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-semibold">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">מגדר *</label>
+            <select id="edit-act-gender" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="male">👨 גבר</option>
+              <option value="female">👩 אישה</option>
+            </select>
           </div>
           <div>
             <label class="block font-bold text-slate-700 mb-1">סיווג מאגר</label>
@@ -676,11 +697,6 @@
           <label class="block font-bold text-slate-700 mb-1">עמדה מועדפת / שיבוץ קבוע</label>
           <select id="edit-act-preferred-stand" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
             <option value="">ללא עמדה קבועה (פנוי לפי צורך)</option>
-            <option value="כיכר החתולות">כיכר החתולות</option>
-            <option value="כיכר ציון">כיכר ציון</option>
-            <option value="גן הפעמון">גן הפעמון</option>
-            <option value="שוק מחנה יהודה">שוק מחנה יהודה</option>
-            <option value="מרכז השיעורים נחלאות">מרכז השיעורים נחלאות</option>
           </select>
         </div>
 
@@ -719,9 +735,18 @@
       </div>
 
       <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">שם מלא *</label>
-          <input type="text" id="modal-act-name" placeholder="למשל: דניאל גולדברג" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500">
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block font-bold text-slate-700 mb-1">שם מלא *</label>
+            <input type="text" id="modal-act-name" placeholder="למשל: דניאל גולדברג" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">מגדר *</label>
+            <select id="modal-act-gender" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="male">👨 גבר</option>
+              <option value="female">👩 אישה</option>
+            </select>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -769,6 +794,98 @@
 
 
   <!-- ========================================== -->
+  <!-- MODAL: עריכת עמדה ומיקומה הפיזי במפה -->
+  <!-- ========================================== -->
+  <div id="modal-edit-stand" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
+            <span>📍 עריכת פרטי עמדה ומיקום פיזי</span>
+          </h3>
+          <p class="text-xs text-slate-500">עדכון שם, כתובת, שעות פעילות ונקודה מדויקת במפה</p>
+        </div>
+        <button onclick="closeEditStandModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <input type="hidden" id="edit-stand-id">
+
+      <div class="space-y-3.5 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">שם העמדה *</label>
+            <input type="text" id="edit-stand-name" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-semibold">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">סוג מוקד</label>
+            <select id="edit-stand-type" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="stand">🟡 דוכן שטח</option>
+              <option value="center">🔵 מרכז שיעורים</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">עיר / אזור</label>
+            <input type="text" id="edit-stand-city" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">כתובת / תיאור מיקום</label>
+            <input type="text" id="edit-stand-address" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">שעות פעילות</label>
+            <input type="text" id="edit-stand-hours" placeholder="למשל: 22:30 - 02:30" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono text-left" dir="ltr">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">תקן פעילים נדרש</label>
+            <input type="number" id="edit-stand-req" min="1" max="20" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-bold text-center">
+          </div>
+        </div>
+
+        <!-- Physical Map Coordinates & Pick from Map -->
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-800">🗺️ מיקום פיזי על המפה (קואורדינטות):</span>
+            <button type="button" onclick="startPickStandLocationOnMap()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] transition shadow-xs flex items-center gap-1">
+              <span>📍</span>
+              <span>בחר מיקום בלחיצה על המפה</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] text-slate-500 mb-0.5">קו רוחב (Latitude)</label>
+              <input type="number" step="0.00001" id="edit-stand-lat" class="w-full p-2 border border-slate-200 rounded-lg bg-white font-mono text-left text-[11px]" dir="ltr">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-500 mb-0.5">קו אורך (Longitude)</label>
+              <input type="number" step="0.00001" id="edit-stand-lng" class="w-full p-2 border border-slate-200 rounded-lg bg-white font-mono text-left text-[11px]" dir="ltr">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+        <button onclick="deleteStandFromModal()" class="text-red-500 hover:text-red-700 font-bold text-xs flex items-center gap-1">
+          <span>🗑️ מחק עמדה</span>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button onclick="closeEditStandModal()" class="px-4 py-2 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100">ביטול</button>
+          <button onclick="saveStandEdit()" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-md">שמור פרטי עמדה</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
   <!-- MODAL: הזנת רפלקציה חדשה לעמדה -->
   <!-- ========================================== -->
   <div id="modal-reflection" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
@@ -779,7 +896,7 @@
           <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
             <span>📝 תשאול וסיכום רפלקציה ממשמרת חמישי</span>
           </h3>
-          <p class="text-xs text-slate-500">מילוי ע"י הרכז על בסיס השיחה עם מפקד העמדה והפעילים</p>
+          <p class="text-xs text-slate-500">מילוי ע"י הרכז על בסיס השיחה עם אחראי/ת העמדה והפעילים</p>
         </div>
         <button onclick="closeNewReflectionModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
       </div>
@@ -1000,10 +1117,12 @@
   <script>
     // --- 1. STATE & WEEKS TIME MACHINE ---
     let currentActivistCategory = 'existing';
+    let currentActivistGenderFilter = 'all';
     let currentMapFilter = 'all';
     let currentRefTagFilter = 'all';
     let leafletMapInstance = null;
     let mapMarkers = [];
+    let pickingLocationStandId = null;
 
     // Expanded accordion state (activist IDs)
     let openAccordionIds = new Set([1]); // First activist open by default
@@ -1099,6 +1218,20 @@
       renderActivistsAccordion();
     }
 
+    function setActivistGenderFilter(gender) {
+      currentActivistGenderFilter = gender;
+      ['all', 'male', 'female'].forEach(g => {
+        const btn = document.getElementById(`btn-gender-${g}`);
+        if (!btn) return;
+        if (g === gender) {
+          btn.className = 'px-2.5 py-1 rounded-lg font-bold bg-white text-slate-900 shadow-xs transition';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition';
+        }
+      });
+      renderActivistsAccordion();
+    }
+
     function toggleActivistAccordion(actId) {
       if (openAccordionIds.has(actId)) {
         openAccordionIds.delete(actId);
@@ -1123,6 +1256,10 @@
 
       let filtered = activistsData.filter(a => a.category === currentActivistCategory);
 
+      if (currentActivistGenderFilter !== 'all') {
+        filtered = filtered.filter(a => (a.gender || 'male') === currentActivistGenderFilter);
+      }
+
       if (search) {
         filtered = filtered.filter(a => 
           a.name.toLowerCase().includes(search) || 
@@ -1143,9 +1280,9 @@
         container.innerHTML = `
           <div class="bg-white p-10 rounded-2xl border border-slate-200 text-center space-y-3">
             <div class="text-3xl">👥</div>
-            <h3 class="font-bold text-sm text-slate-800">מאגר הפעילים נקי ומוכן להזנה</h3>
+            <h3 class="font-bold text-sm text-slate-800">${activistsData.length === 0 ? 'מאגר הפעילים נקי ומוכן להזנה' : 'לא נמצאו פעילים בסינון הנוכחי'}</h3>
             <p class="text-xs text-slate-500">לחץ על "+ הוספת פעיל" כדי להוסיף פעילים חדשים למערכת</p>
-            <button onclick="openAddActivistModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-xs">+ הוספת פעיל ראשון</button>
+            <button onclick="openAddActivistModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-xs">+ הוספת פעיל</button>
           </div>
         `;
         return;
@@ -1156,15 +1293,20 @@
 
       container.innerHTML = filtered.map(act => {
         const isOpen = openAccordionIds.has(act.id);
+        const isFemale = act.gender === 'female';
+        const genderLabel = isFemale ? '👩 אישה' : '👨 גבר';
+        const leadTitle = isFemale ? 'אחראית' : 'אחראי';
         
         // Find if assigned to any stand in the current week
         let assignedStandName = null;
         let isLeadThisWeek = false;
         for (const [sId, sData] of Object.entries(currentRoster)) {
-          if (sData.assignedIds.includes(act.id)) {
+          if (sData.assignedIds && sData.assignedIds.includes(act.id)) {
             const standObj = standsData.find(s => s.id === sId);
             if (standObj) assignedStandName = standObj.name;
-            if (sData.leadId === act.id) isLeadThisWeek = true;
+            if (sData.leadMaleId === act.id || sData.leadFemaleId === act.id || sData.leadId === act.id) {
+              isLeadThisWeek = true;
+            }
             break;
           }
         }
@@ -1176,13 +1318,16 @@
             <div onclick="toggleActivistAccordion(${act.id})" class="p-3.5 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none bg-white hover:bg-slate-50/80 transition">
               
               <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl ${isOpen ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-100 text-slate-700 font-bold'} border border-slate-200 flex items-center justify-center text-sm transition">
+                <div class="w-9 h-9 rounded-xl ${isOpen ? 'bg-amber-500 text-slate-950 font-black' : isFemale ? 'bg-rose-50 text-rose-700 font-bold' : 'bg-slate-100 text-slate-700 font-bold'} border border-slate-200 flex items-center justify-center text-sm transition">
                   ${act.name.slice(0, 1)}
                 </div>
 
                 <div>
                   <div class="flex items-center gap-2">
                     <h4 class="font-bold text-sm text-slate-900">${act.name}</h4>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isFemale ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-sky-50 text-sky-700 border border-sky-200'}">
+                      ${genderLabel}
+                    </span>
                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       act.status === 'פעיל מאושר' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                       act.status === 'ראיון רכז' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
@@ -1193,7 +1338,7 @@
                   </div>
                   
                   <div class="flex items-center gap-2 text-[11px] text-slate-500 font-mono" dir="ltr">
-                    <span>${act.phone}</span>
+                    <span>${act.phone || 'ללא טלפון'}</span>
                     <span class="text-slate-300">•</span>
                     <span class="font-sans text-[11px] text-slate-400">${act.email || 'ללא דוא"ל'}</span>
                   </div>
@@ -1209,7 +1354,7 @@
 
                 ${assignedStandName ? `
                   <span class="text-[10px] bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-lg border border-blue-200">
-                    ${isLeadThisWeek ? '⭐ מפקד: ' : '📍 משובץ: '}${assignedStandName}
+                    ${isLeadThisWeek ? `⭐ ${leadTitle}: ` : '📍 משובץ: '}${assignedStandName}
                   </span>
                 ` : `
                   <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
@@ -1236,7 +1381,7 @@
                     <span class="text-[10px] font-bold text-slate-400">עמדה מועדפת / קבועה:</span>
                     <div class="font-semibold text-slate-800">${act.preferredStand || 'ללא עמדה מועדפת (פנוי לשיבוץ)'}</div>
                     <div class="text-[10px] text-slate-500 pt-1">
-                      סטטוס השבוע: <strong class="text-slate-800">${assignedStandName ? assignedStandName + (isLeadThisWeek ? ' (מפקד)' : '') : 'ממתין לשיבוץ'}</strong>
+                      סטטוס השבוע: <strong class="text-slate-800">${assignedStandName ? assignedStandName + (isLeadThisWeek ? ` (${leadTitle})` : '') : 'ממתין לשיבוץ'}</strong>
                     </div>
                   </div>
 
@@ -1247,7 +1392,7 @@
                       ${act.smsVerified ? 'זמין ואישר הגעה למשמרת' : 'טרם אישר זמינות השבוע'}
                     </div>
                     <div class="text-[10px] text-slate-500 pt-1">
-                      מספר נייד: <span class="font-mono" dir="ltr">${act.phone}</span>
+                      מספר נייד: <span class="font-mono" dir="ltr">${act.phone || 'לא הוזן'}</span>
                     </div>
                   </div>
 
@@ -1258,8 +1403,10 @@
                       <div class="font-semibold text-slate-700 mt-0.5">חיוג או וואטסאפ</div>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <a href="tel:${act.phone}" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700" title="חיוג">📞 שיחה</a>
-                      <a href="https://wa.me/972${act.phone.replace(/[^0-9]/g, '').slice(1)}" target="_blank" class="p-2 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-700 font-bold" title="וואטסאפ">💬 ווטסאפ</a>
+                      ${act.phone ? `
+                        <a href="tel:${act.phone}" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700" title="חיוג">📞 שיחה</a>
+                        <a href="https://wa.me/972${act.phone.replace(/[^0-9]/g, '').slice(1)}" target="_blank" class="p-2 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-700 font-bold" title="וואטסאפ">💬 ווטסאפ</a>
+                      ` : '<span class="text-[10px] text-slate-400">חסר טלפון</span>'}
                     </div>
                   </div>
 
@@ -1292,14 +1439,15 @@
 
       document.getElementById('edit-act-id').value = act.id;
       document.getElementById('edit-act-name').value = act.name;
+      document.getElementById('edit-act-gender').value = act.gender || 'male';
       document.getElementById('edit-act-category').value = act.category;
-      document.getElementById('edit-act-phone').value = act.phone;
+      document.getElementById('edit-act-phone').value = act.phone || '';
       document.getElementById('edit-act-email').value = act.email || '';
       document.getElementById('edit-act-sms').value = act.smsVerified ? 'true' : 'false';
       document.getElementById('edit-act-status').value = act.status;
       document.getElementById('edit-act-preferred-stand').value = act.preferredStand || '';
       document.getElementById('edit-act-notes').value = act.notes || '';
-      document.getElementById('modal-edit-act-subtitle').innerText = `עריכת פרטי פעיל: ${act.name}`;
+      document.getElementById('modal-edit-act-subtitle').innerText = `עריכת פרטי פעיל/ה: ${act.name}`;
 
       document.getElementById('modal-edit-activist').classList.remove('hidden');
     }
@@ -1314,6 +1462,7 @@
       if (!act) return;
 
       act.name = document.getElementById('edit-act-name').value.trim();
+      act.gender = document.getElementById('edit-act-gender').value;
       act.category = document.getElementById('edit-act-category').value;
       act.phone = document.getElementById('edit-act-phone').value.trim();
       act.email = document.getElementById('edit-act-email').value.trim();
@@ -1327,7 +1476,7 @@
       renderStandsRoster();
       updateMapMarkers();
       syncStateToServer();
-      alert(`פרטי הפעיל ${act.name} עודכנו בהצלחה במאגר!`);
+      alert(`פרטי ${act.name} עודכנו בהצלחה במאגר!`);
     }
 
     function deleteActivistFromModal() {
@@ -1354,6 +1503,7 @@
 
     function saveNewActivist() {
       const name = document.getElementById('modal-act-name').value.trim();
+      const gender = document.getElementById('modal-act-gender').value;
       const phone = document.getElementById('modal-act-phone').value.trim();
       const email = document.getElementById('modal-act-email').value.trim();
       const category = document.getElementById('modal-act-category').value;
@@ -1368,6 +1518,7 @@
       const newAct = {
         id: Date.now(),
         name,
+        gender,
         phone,
         email,
         category,
@@ -1385,24 +1536,54 @@
       document.getElementById('modal-act-notes').value = '';
       setActivistCategory(category);
       syncStateToServer();
-      alert(`הפעיל ${name} נוסף בהצלחה למאגר!`);
+      alert(`${name} נוסף/ה בהצלחה למאגר!`);
     }
 
 
-    // --- 4. PAGE 2: MAP MODULE (WITH DIRECT LINK TO STAND ROSTER) ---
+    // --- 4. PAGE 2: MAP MODULE (WITH DIRECT EDIT, DRAG & LINK TO STAND ROSTER) ---
     function initMapIfNeeded() {
       if (leafletMapInstance) {
         leafletMapInstance.invalidateSize();
+        updateMapMarkers();
         return;
       }
 
-      leafletMapInstance = L.map('leaflet-map').setView([31.7815, 35.2175], 14);
+      leafletMapInstance = L.map('leaflet-map').setView([31.7815, 35.2175], 13);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
       }).addTo(leafletMapInstance);
 
+      leafletMapInstance.on('click', (e) => {
+        if (!pickingLocationStandId) return;
+        const { lat, lng } = e.latlng;
+        const rLat = Number(lat.toFixed(6));
+        const rLng = Number(lng.toFixed(6));
+
+        document.getElementById('edit-stand-lat').value = rLat;
+        document.getElementById('edit-stand-lng').value = rLng;
+
+        const stand = standsData.find(s => s.id === pickingLocationStandId);
+        if (stand) {
+          stand.coords = [rLat, rLng];
+          updateMapMarkers();
+          syncStateToServer();
+        }
+
+        pickingLocationStandId = null;
+        document.getElementById('map-pick-banner').classList.add('hidden');
+        document.getElementById('modal-edit-stand').classList.remove('hidden');
+      });
+
       updateMapMarkers();
+    }
+
+    function getStandLeads(sData) {
+      const maleLead = activistsData.find(a => a.id === sData.leadMaleId)
+        || (sData.leadId ? activistsData.find(a => a.id === sData.leadId && (a.gender || 'male') === 'male') : null);
+      const femaleLead = activistsData.find(a => a.id === sData.leadFemaleId)
+        || (sData.leadId ? activistsData.find(a => a.id === sData.leadId && a.gender === 'female') : null);
+      return { maleLead, femaleLead };
     }
 
     function updateMapMarkers() {
@@ -1417,12 +1598,13 @@
       standsData.forEach(stand => {
         if (currentMapFilter !== 'all' && stand.type !== currentMapFilter) return;
 
-        const sData = currentRoster[stand.id] || { leadId: null, assignedIds: [], note: '' };
-        const assigned = activistsData.filter(a => sData.assignedIds.includes(a.id));
-        const lead = activistsData.find(a => a.id === sData.leadId);
+        const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
+        const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
+        const { maleLead, femaleLead } = getStandLeads(sData);
+        const hasAnyLead = Boolean(maleLead || femaleLead);
 
         // Status color calculation
-        const statusColor = assigned.length >= stand.requiredActivists && lead ? '#10b981' : assigned.length > 0 ? '#f59e0b' : '#ef4444';
+        const statusColor = assigned.length >= stand.requiredActivists && hasAnyLead ? '#10b981' : assigned.length > 0 ? '#f59e0b' : '#ef4444';
 
         const customIcon = L.divIcon({
           className: 'custom-map-pin',
@@ -1435,33 +1617,44 @@
           iconAnchor: [14, 14]
         });
 
-        const marker = L.marker(stand.coords, { icon: customIcon }).addTo(leafletMapInstance);
+        const marker = L.marker(stand.coords, { icon: customIcon, draggable: true }).addTo(leafletMapInstance);
+
+        marker.on('dragend', (e) => {
+          const pos = e.target.getLatLng();
+          stand.coords = [Number(pos.lat.toFixed(6)), Number(pos.lng.toFixed(6))];
+          updateMapMarkers();
+          syncStateToServer();
+        });
         
         marker.bindPopup(`
-          <div dir="rtl" style="font-family: 'Rubik', sans-serif; min-width: 220px;">
+          <div dir="rtl" style="font-family: 'Rubik', sans-serif; min-width: 230px;">
             <div style="font-weight: bold; font-size: 14px; color: #0f172a; margin-bottom: 2px;">${stand.name}</div>
-            <div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">${stand.address} • ${stand.hours}</div>
-            <div style="font-size: 11px; margin-bottom: 4px;">
-              <strong>מפקד עמדה:</strong> ${lead ? lead.name : '<span style="color:#ef4444">טרם מונה</span>'}
+            <div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">${stand.address || stand.city || ''} ${stand.hours ? '• ' + stand.hours : ''}</div>
+            <div style="font-size: 11px; margin-bottom: 4px; line-height: 1.5;">
+              <div><strong>👨 אחראי:</strong> ${maleLead ? maleLead.name : '<span style="color:#94a3b8">טרם מונה</span>'}</div>
+              <div><strong>👩 אחראית:</strong> ${femaleLead ? femaleLead.name : '<span style="color:#94a3b8">טרם מונתה</span>'}</div>
             </div>
             <div style="font-size: 11px; margin-bottom: 6px;">
               <strong>פעילים משובצים (${assigned.length}/${stand.requiredActivists}):</strong><br>
-              ${assigned.map(a => `• ${a.name}`).join('<br>') || 'אין עדיין משובצים'}
+              ${assigned.map(a => `• ${a.gender === 'female' ? '👩' : '👨'} ${a.name}`).join('<br>') || 'אין עדיין משובצים'}
             </div>
             <div style="font-size: 10px; background: #f8fafc; padding: 4px 6px; border-radius: 6px; border: 1px solid #e2e8f0; color: #334155; margin-bottom: 8px;">
               <strong>סטטוס השבוע:</strong> ${sData.note || 'שגרה'}
             </div>
 
-            <!-- DIRECT JUMP TO STAND ROSTER IN PAGE 3 -->
-            <button onclick="jumpToStandRoster('${stand.id}')" style="width: 100%; background: #0f172a; color: white; font-weight: bold; font-size: 11px; padding: 6px; border-radius: 8px; border: none; cursor: pointer; text-align: center;">
-              📋 עבור לשיבוץ עמדה זו בדף 3 ➔
-            </button>
+            <div style="display: flex; gap: 6px;">
+              <button onclick="jumpToStandRoster('${stand.id}')" style="flex: 1; background: #0f172a; color: white; font-weight: bold; font-size: 11px; padding: 6px; border-radius: 8px; border: none; cursor: pointer; text-align: center;">
+                📋 לשיבוץ בדף 3
+              </button>
+              <button onclick="openEditStandModal('${stand.id}')" style="background: #f59e0b; color: #0f172a; font-weight: bold; font-size: 11px; padding: 6px 8px; border-radius: 8px; border: none; cursor: pointer;">
+                ✏️ ערוך
+              </button>
+            </div>
           </div>
         `);
 
         mapMarkers.push(marker);
 
-        // Append to side list with jump button
         listHtml += `
           <div class="p-2.5 rounded-xl border border-slate-200/70 hover:border-amber-400 hover:bg-slate-50 transition text-xs space-y-1.5">
             <div onclick="focusStandOnMap(${stand.coords[0]}, ${stand.coords[1]})" class="cursor-pointer">
@@ -1472,21 +1665,29 @@
                 </span>
                 <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${statusColor}"></span>
               </div>
-              <div class="text-[11px] text-slate-500">${stand.address}</div>
-              <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
-                <span>משובצים: ${assigned.length}/${stand.requiredActivists}</span>
-                <span>${lead ? 'מפקד: ' + lead.name : 'ללא מפקד'}</span>
+              <div class="text-[11px] text-slate-500">${stand.address || stand.city || ''}</div>
+              <div class="flex flex-col gap-0.5 text-[10px] text-slate-500 pt-1 border-t border-slate-100 mt-1">
+                <div class="flex justify-between">
+                  <span>משובצים: ${assigned.length}/${stand.requiredActivists}</span>
+                  <span>${maleLead ? '👨 ' + maleLead.name : 'ללא אחראי'}</span>
+                </div>
+                ${femaleLead ? `<div class="text-left text-rose-700 font-semibold">👩 אחראית: ${femaleLead.name}</div>` : ''}
               </div>
             </div>
 
-            <button onclick="jumpToStandRoster('${stand.id}')" class="w-full bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 font-bold text-[10px] py-1 rounded-md transition text-center">
-              עבור לשיבוץ עמדה זו בדף 3 ➔
-            </button>
+            <div class="flex gap-1.5">
+              <button onclick="jumpToStandRoster('${stand.id}')" class="flex-1 bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 font-bold text-[10px] py-1 rounded-md transition text-center">
+                שיבוץ בדף 3 ➔
+              </button>
+              <button onclick="openEditStandModal('${stand.id}')" class="bg-amber-50 hover:bg-amber-200 text-amber-900 border border-amber-200 font-bold text-[10px] px-2 py-1 rounded-md transition" title="ערוך עמדה ומיקום">
+                ✏️ ערוך
+              </button>
+            </div>
           </div>
         `;
       });
 
-      document.getElementById('map-stand-list').innerHTML = listHtml;
+      document.getElementById('map-stand-list').innerHTML = listHtml || '<div class="text-xs text-slate-400 text-center p-4">אין עמדות תואמות</div>';
     }
 
     function focusStandOnMap(lat, lng) {
@@ -1518,26 +1719,118 @@
     }
 
     function openAddStandModal() {
-      const name = prompt('הזן שם עמדה חדשה (למשל: שער יפו):');
-      if (!name) return;
-      const address = prompt('הזן כתובת / מיקום:', 'ירושלים');
-      
-      const newStand = {
-        id: 'stand-' + Date.now(),
-        name,
-        type: 'stand',
-        city: 'ירושלים',
-        address: address || 'ירושלים',
-        coords: [31.7765 + (Math.random() - 0.5) * 0.01, 35.2285 + (Math.random() - 0.5) * 0.01],
-        hours: '23:00 - 02:30',
-        requiredActivists: 2
-      };
+      document.getElementById('edit-stand-id').value = '';
+      document.getElementById('edit-stand-name').value = '';
+      document.getElementById('edit-stand-type').value = 'stand';
+      document.getElementById('edit-stand-city').value = 'ירושלים';
+      document.getElementById('edit-stand-address').value = '';
+      document.getElementById('edit-stand-hours').value = '22:30 - 02:30';
+      document.getElementById('edit-stand-req').value = 2;
+      document.getElementById('edit-stand-lat').value = 31.7815;
+      document.getElementById('edit-stand-lng').value = 35.2175;
+      document.getElementById('modal-edit-stand').classList.remove('hidden');
+    }
 
-      standsData.push(newStand);
+    function openEditStandModal(standId) {
+      const stand = standsData.find(s => s.id === standId);
+      if (!stand) return;
+
+      document.getElementById('edit-stand-id').value = stand.id;
+      document.getElementById('edit-stand-name').value = stand.name;
+      document.getElementById('edit-stand-type').value = stand.type || 'stand';
+      document.getElementById('edit-stand-city').value = stand.city || '';
+      document.getElementById('edit-stand-address').value = stand.address || '';
+      document.getElementById('edit-stand-hours').value = stand.hours || '';
+      document.getElementById('edit-stand-req').value = stand.requiredActivists || 2;
+      document.getElementById('edit-stand-lat').value = stand.coords ? stand.coords[0] : 31.7815;
+      document.getElementById('edit-stand-lng').value = stand.coords ? stand.coords[1] : 35.2175;
+
+      document.getElementById('modal-edit-stand').classList.remove('hidden');
+    }
+
+    function closeEditStandModal() {
+      document.getElementById('modal-edit-stand').classList.add('hidden');
+    }
+
+    function startPickStandLocationOnMap() {
+      const standId = document.getElementById('edit-stand-id').value;
+      const standName = document.getElementById('edit-stand-name').value.trim() || 'העמדה החדשה';
+      pickingLocationStandId = standId || '__NEW__';
+      document.getElementById('map-pick-stand-name').innerText = standName;
+      document.getElementById('modal-edit-stand').classList.add('hidden');
+      switchPage('map');
+      document.getElementById('map-pick-banner').classList.remove('hidden');
+    }
+
+    function cancelMapLocationPick() {
+      pickingLocationStandId = null;
+      document.getElementById('map-pick-banner').classList.add('hidden');
+      document.getElementById('modal-edit-stand').classList.remove('hidden');
+    }
+
+    function saveStandEdit() {
+      const standId = document.getElementById('edit-stand-id').value;
+      const name = document.getElementById('edit-stand-name').value.trim();
+      const type = document.getElementById('edit-stand-type').value;
+      const city = document.getElementById('edit-stand-city').value.trim();
+      const address = document.getElementById('edit-stand-address').value.trim();
+      const hours = document.getElementById('edit-stand-hours').value.trim();
+      const req = parseInt(document.getElementById('edit-stand-req').value) || 2;
+      const lat = parseFloat(document.getElementById('edit-stand-lat').value) || 31.7815;
+      const lng = parseFloat(document.getElementById('edit-stand-lng').value) || 35.2175;
+
+      if (!name) {
+        alert('אנא הזן שם לעמדה!');
+        return;
+      }
+
+      if (standId) {
+        const stand = standsData.find(s => s.id === standId);
+        if (stand) {
+          stand.name = name;
+          stand.type = type;
+          stand.city = city;
+          stand.address = address;
+          stand.hours = hours;
+          stand.requiredActivists = req;
+          stand.coords = [lat, lng];
+        }
+      } else {
+        standsData.push({
+          id: 'stand-' + Date.now(),
+          name,
+          type,
+          city,
+          address,
+          coords: [lat, lng],
+          hours,
+          requiredActivists: req
+        });
+      }
+
+      closeEditStandModal();
+      populateAllStandSelects();
       updateMapMarkers();
       renderStandsRoster();
       syncStateToServer();
-      alert(`העמדה ${name} נוספה בהצלחה למפה ולשיבוצים!`);
+      alert(`פרטי העמדה "${name}" נשמרו בהצלחה!`);
+    }
+
+    function deleteStandFromModal() {
+      const standId = document.getElementById('edit-stand-id').value;
+      if (!standId) {
+        closeEditStandModal();
+        return;
+      }
+      const stand = standsData.find(s => s.id === standId);
+      if (stand && confirm(`האם למחוק את העמדה "${stand.name}" מהמערכת?`)) {
+        standsData = standsData.filter(s => s.id !== standId);
+        closeEditStandModal();
+        populateAllStandSelects();
+        updateMapMarkers();
+        renderStandsRoster();
+        syncStateToServer();
+      }
     }
 
 
@@ -1592,10 +1885,9 @@
     function getCurrentWeekRoster() {
       const weekId = weeksList[currentWeekIndex].id;
       if (!weeklyRosters[weekId]) {
-        // Initialize empty roster for this week
         weeklyRosters[weekId] = {};
         standsData.forEach(stand => {
-          weeklyRosters[weekId][stand.id] = { leadId: null, assignedIds: [], note: 'ממתין לשיבוץ' };
+          weeklyRosters[weekId][stand.id] = { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: 'ממתין לשיבוץ' };
         });
       }
       return weeklyRosters[weekId];
@@ -1617,12 +1909,14 @@
       }
 
       const currentWeek = weeksList[currentWeekIndex];
-      if (confirm(`האם להעמיד את נציגי ומפקדי השבוע הקודם (${prevWeek.name}) כברירת מחדל לשבוע זה (${currentWeek.name})?`)) {
+      if (confirm(`האם להעמיד את נציגי ואחראי/ות השבוע הקודם (${prevWeek.name}) כברירת מחדל לשבוע זה (${currentWeek.name})?`)) {
         const currentRoster = getCurrentWeekRoster();
         for (const [standId, data] of Object.entries(prevRoster)) {
           currentRoster[standId] = {
-            leadId: data.leadId,
-            assignedIds: [...data.assignedIds],
+            leadMaleId: data.leadMaleId || null,
+            leadFemaleId: data.leadFemaleId || null,
+            leadId: data.leadId || null,
+            assignedIds: [...(data.assignedIds || [])],
             note: 'הועתק כברירת מחדל משבוע שעבר'
           };
         }
@@ -1654,41 +1948,45 @@
       const currentRoster = getCurrentWeekRoster();
 
       grid.innerHTML = standsData.map(stand => {
-        const sData = currentRoster[stand.id] || { leadId: null, assignedIds: [], note: '' };
-        const assigned = activistsData.filter(a => sData.assignedIds.includes(a.id));
-        const lead = activistsData.find(a => a.id === sData.leadId);
+        const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
+        const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
+        const { maleLead, femaleLead } = getStandLeads(sData);
+        const hasAnyLead = Boolean(maleLead || femaleLead);
 
         return `
           <div id="stand-card-${stand.id}" class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between space-y-4">
             
             <!-- Stand Header -->
             <div>
-              <div class="flex items-start justify-between">
+              <div class="flex items-start justify-between gap-2">
                 <div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-sm">${stand.type === 'stand' ? '🟡' : '🔵'}</span>
                     <h3 class="font-bold text-base text-slate-900">${stand.name}</h3>
+                    <button onclick="openEditStandModal('${stand.id}')" class="text-slate-400 hover:text-amber-600 text-xs px-1" title="ערוך פרטי עמדה ומיקום במפה">✏️</button>
                   </div>
-                  <div class="text-xs text-slate-400">${stand.address} • ${stand.hours}</div>
+                  <div class="text-xs text-slate-400">${stand.address || stand.city || ''} ${stand.hours ? '• ' + stand.hours : ''}</div>
                 </div>
 
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  assigned.length >= stand.requiredActivists && lead ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                  assigned.length >= stand.requiredActivists && hasAnyLead ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                   assigned.length > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                   'bg-red-50 text-red-700 border border-red-200'
                 }">
-                  ${assigned.length >= stand.requiredActivists ? 'מאויש מלא ✓' : `חסר ${stand.requiredActivists - assigned.length} פעילים`}
+                  ${assigned.length >= stand.requiredActivists ? 'מאויש מלא ✓' : `חסר ${Math.max(1, stand.requiredActivists - assigned.length)} פעילים`}
                 </span>
               </div>
 
-              <!-- Lead Activist Box -->
-              <div class="mt-3 bg-amber-50/60 border border-amber-200/70 rounded-xl p-2.5 text-xs">
-                <div class="flex items-center justify-between text-amber-900 font-bold mb-1">
-                  <span>⭐ מפקד עמדה ואחראי קשר:</span>
-                  ${lead ? `<span class="text-slate-500 font-mono text-[10px]" dir="ltr">${lead.phone}</span>` : ''}
+              <!-- Male & Female Leads Box -->
+              <div class="mt-3 bg-amber-50/60 border border-amber-200/70 rounded-xl p-2.5 text-xs space-y-1.5">
+                <div class="text-amber-900 font-bold text-[11px]">⭐ אחראי ואחראית עמדה:</div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-700">👨 <strong>אחראי:</strong> ${maleLead ? maleLead.name : '<span class="text-slate-400 font-normal">טרם מונה</span>'}</span>
+                  ${maleLead && maleLead.phone ? `<span class="text-slate-500 font-mono text-[10px]" dir="ltr">${maleLead.phone}</span>` : ''}
                 </div>
-                <div class="font-semibold text-slate-800">
-                  ${lead ? lead.name : '<span class="text-red-600 font-normal">טרם מונה מפקד לעמדה זו</span>'}
+                <div class="flex items-center justify-between border-t border-amber-200/40 pt-1">
+                  <span class="text-slate-700">👩 <strong>אחראית:</strong> ${femaleLead ? femaleLead.name : '<span class="text-slate-400 font-normal">טרם מונתה</span>'}</span>
+                  ${femaleLead && femaleLead.phone ? `<span class="text-slate-500 font-mono text-[10px]" dir="ltr">${femaleLead.phone}</span>` : ''}
                 </div>
               </div>
 
@@ -1696,23 +1994,29 @@
               <div class="mt-3 space-y-1.5">
                 <div class="text-[11px] font-bold text-slate-600 flex items-center justify-between">
                   <span>פעילים משובצים לשבוע זה (${assigned.length}):</span>
-                  <button onclick="openAssignModal('${stand.id}', '${stand.name}')" class="text-blue-600 hover:underline font-bold">+ שבץ פעיל</button>
+                  <button onclick="openAssignModal('${stand.id}', '${stand.name}')" class="text-blue-600 hover:underline font-bold">+ שבץ פעיל/ה</button>
                 </div>
 
-                ${assigned.map(a => `
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
-                    <div class="flex items-center gap-2">
-                      <span class="font-medium text-slate-800">${a.name}</span>
-                      ${sData.leadId === a.id ? '<span class="text-[9px] bg-amber-200 text-amber-900 font-bold px-1 rounded">מפקד</span>' : ''}
+                ${assigned.map(a => {
+                  const isFemale = a.gender === 'female';
+                  const isLead = isFemale ? (femaleLead && femaleLead.id === a.id) : (maleLead && maleLead.id === a.id);
+                  const roleWord = isFemale ? 'אחראית' : 'אחראי';
+                  return `
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px]">${isFemale ? '👩' : '👨'}</span>
+                        <span class="font-medium text-slate-800">${a.name}</span>
+                        ${isLead ? `<span class="text-[9px] ${isFemale ? 'bg-rose-200 text-rose-900' : 'bg-amber-200 text-amber-900'} font-bold px-1.5 rounded">${roleWord}</span>` : ''}
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button onclick="toggleStandLeadInWeek('${stand.id}', ${a.id})" class="text-[10px] ${isFemale ? 'text-rose-700' : 'text-amber-700'} hover:underline font-semibold" title="הגדר/בטל כ${roleWord} עמדה">
+                          ${isLead ? `בטל ${roleWord}` : `הפוך ל${roleWord}`}
+                        </button>
+                        <button onclick="unassignActivistInWeek('${stand.id}', ${a.id})" class="text-red-500 hover:text-red-700 font-bold text-xs" title="הסר מעמדה">✕</button>
+                      </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <button onclick="toggleStandLeadInWeek('${stand.id}', ${a.id})" class="text-[10px] text-amber-700 hover:underline font-semibold" title="הגדר/בטל כמפקד עמדה">
-                        ${sData.leadId === a.id ? 'בטל פיקוד' : 'הפוך למפקד'}
-                      </button>
-                      <button onclick="unassignActivistInWeek('${stand.id}', ${a.id})" class="text-red-500 hover:text-red-700 font-bold text-xs" title="הסר מעמדה">✕</button>
-                    </div>
-                  </div>
-                `).join('') || '<div class="text-xs text-slate-400 italic p-2 bg-slate-50 rounded-lg">אין פעילים משובצים לעמדה זו בשבוע הנבחר</div>'}
+                  `;
+                }).join('') || '<div class="text-xs text-slate-400 italic p-2 bg-slate-50 rounded-lg">אין פעילים משובצים לעמדה זו בשבוע הנבחר</div>'}
               </div>
 
               <!-- Live Evening Status Note -->
@@ -1741,22 +2045,27 @@
 
     function openAssignModal(standId, standName) {
       const currentRoster = getCurrentWeekRoster();
+      if (!currentRoster[standId]) {
+        currentRoster[standId] = { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
+      }
       const sData = currentRoster[standId];
 
-      // Available activists: those not yet in this stand
       const available = activistsData.filter(a => !sData.assignedIds.includes(a.id));
       if (available.length === 0) {
         alert('כל הפעילים במאגר כבר משובצים לעמדה זו!');
         return;
       }
 
-      const options = available.map((a, i) => `${i + 1}. ${a.name} (${a.phone})`).join('\n');
-      const pick = prompt(`בחר פעיל לשיבוץ בעמדת ${standName}:\n\n${options}\n\nהזן את מספר הפעיל:`);
+      const options = available.map((a, i) => `${i + 1}. ${a.gender === 'female' ? '👩' : '👨'} ${a.name} (${a.phone || 'ללא טלפון'})`).join('\n');
+      const pick = prompt(`בחר פעיל/ה לשיבוץ בעמדת ${standName}:\n\n${options}\n\nהזן את המספר:`);
       const idx = parseInt(pick) - 1;
       if (!isNaN(idx) && available[idx]) {
-        sData.assignedIds.push(available[idx].id);
-        if (!sData.leadId) {
-          sData.leadId = available[idx].id; // Make lead if none
+        const picked = available[idx];
+        sData.assignedIds.push(picked.id);
+        if (picked.gender === 'female') {
+          if (!sData.leadFemaleId) sData.leadFemaleId = picked.id;
+        } else {
+          if (!sData.leadMaleId) sData.leadMaleId = picked.id;
         }
         renderStandsRoster();
         renderActivistsAccordion();
@@ -1768,10 +2077,15 @@
     function toggleStandLeadInWeek(standId, actId) {
       const currentRoster = getCurrentWeekRoster();
       const sData = currentRoster[standId];
-      if (sData.leadId === actId) {
-        sData.leadId = null;
+      const act = activistsData.find(a => a.id === actId);
+      if (!sData || !act) return;
+
+      if (act.gender === 'female') {
+        sData.leadFemaleId = sData.leadFemaleId === actId ? null : actId;
+        if (sData.leadId === actId) sData.leadId = null;
       } else {
-        sData.leadId = actId;
+        sData.leadMaleId = sData.leadMaleId === actId ? null : actId;
+        if (sData.leadId === actId) sData.leadId = null;
       }
       renderStandsRoster();
       renderActivistsAccordion();
@@ -1783,9 +2097,9 @@
       const currentRoster = getCurrentWeekRoster();
       const sData = currentRoster[standId];
       sData.assignedIds = sData.assignedIds.filter(id => id !== actId);
-      if (sData.leadId === actId) {
-        sData.leadId = sData.assignedIds[0] || null;
-      }
+      if (sData.leadId === actId) sData.leadId = null;
+      if (sData.leadMaleId === actId) sData.leadMaleId = null;
+      if (sData.leadFemaleId === actId) sData.leadFemaleId = null;
       renderStandsRoster();
       renderActivistsAccordion();
       updateMapMarkers();
@@ -1811,11 +2125,12 @@
       let lines = [`*🕯️ שיבוץ עמדות "השיבנו דוכנים" — ${currentWeek.parasha} (${currentWeek.date})*\n`];
 
       standsData.forEach(stand => {
-        const sData = currentRoster[stand.id] || { leadId: null, assignedIds: [], note: '' };
-        const lead = activistsData.find(a => a.id === sData.leadId);
-        const assigned = sData.assignedIds.map(id => activistsData.find(a => a.id === id)).filter(Boolean);
-        lines.push(`📍 *${stand.name}* (${stand.hours}):`);
-        lines.push(`   ⭐ מפקד עמדה: ${lead ? lead.name + ' (' + lead.phone + ')' : 'טרם שובץ'}`);
+        const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
+        const { maleLead, femaleLead } = getStandLeads(sData);
+        const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
+        lines.push(`📍 *${stand.name}* ${stand.hours ? '(' + stand.hours + ')' : ''}:`);
+        lines.push(`   👨 אחראי עמדה: ${maleLead ? maleLead.name + (maleLead.phone ? ' (' + maleLead.phone + ')' : '') : 'טרם שובץ'}`);
+        lines.push(`   👩 אחראית עמדה: ${femaleLead ? femaleLead.name + (femaleLead.phone ? ' (' + femaleLead.phone + ')' : '') : 'טרם שובצה'}`);
         lines.push(`   👥 צוות: ${assigned.length > 0 ? assigned.map(a => a.name).join(', ') : 'ללא שיבוץ'}`);
         if (sData.note) lines.push(`   📝 דגשים: ${sData.note}`);
         lines.push('');
