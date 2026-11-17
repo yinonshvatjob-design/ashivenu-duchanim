@@ -1,0 +1,9 @@
+{
+  "name": "ashivenu-duchanim",
+  "version": "1.0.0",
+  "description": "השיבנו דוכנים - מערכת שליטה, שיבוצים, רפלקציות וליווי בתשובה",
+  "main": "serve_prototype.js",
+  "scripts": {
+    "start": "node serve_prototype.js"
+  }
+}

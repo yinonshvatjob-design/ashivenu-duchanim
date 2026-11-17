@@ -1,0 +1,2557 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>השיבנו דוכנים - מערכת שליטה, עמדות, שיבוצים ורפלקציות</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body {
+      font-family: 'Rubik', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .highlight-stand {
+      animation: flashBorder 2s ease-in-out;
+    }
+    @keyframes flashBorder {
+      0%, 100% { border-color: #e2e8f0; box-shadow: none; }
+      25%, 75% { border-color: #f59e0b; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+    }
+    .badge-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+
+  <!-- ========================================== -->
+  <!-- LOGIN SCREEN OVERLAY (מנהל תוכנה + רכזים) -->
+  <!-- ========================================== -->
+  <div id="login-screen-overlay" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+      
+      <!-- Top Brand Header -->
+      <div class="bg-slate-900 p-6 text-center text-white space-y-2 border-b border-slate-800">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center font-black text-slate-950 text-2xl shadow-lg">
+          ה
+        </div>
+        <h1 class="text-xl font-black tracking-wide">השיבנו דוכנים</h1>
+        <p class="text-xs text-slate-400">מערכת שליטה, עמדות, שיבוצים, רפלקציות וליווי בתשובה</p>
+      </div>
+
+      <!-- Login Form -->
+      <div class="p-6 space-y-4">
+        <div id="login-error-box" class="hidden bg-red-50 border border-red-200 text-red-700 text-xs font-bold p-3 rounded-xl text-center"></div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">שם משתמש</label>
+          <input type="text" id="login-identifier" value="" placeholder="הזן שם משתמש..." onkeydown="if(event.key==='Enter') performLogin()" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:border-amber-500" dir="auto">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">סיסמה אישית</label>
+          <input type="password" id="login-password" value="" placeholder="••••••••" onkeydown="if(event.key==='Enter') performLogin()" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-mono outline-none focus:border-amber-500 text-left" dir="ltr">
+        </div>
+
+        <button onclick="performLogin()" class="w-full bg-slate-900 hover:bg-slate-800 text-amber-400 font-black py-3 rounded-xl text-sm shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
+          <span>🔓</span>
+          <span>כניסה למערכת</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOP HEADER & MAIN NAVIGATION -->
+  <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center font-black text-slate-950 text-xl shadow">
+          ה
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg tracking-wide text-white">השיבנו דוכנים</span>
+            <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold px-2 py-0.5 rounded-full">חמ"ל שטח חי</span>
+          </div>
+          <div class="text-[11px] text-slate-400">מערכת תיאום חמישי בלילה, עמדות, שיבוצים ורפלקציה</div>
+        </div>
+      </div>
+
+      <!-- Main Tabs Navigation -->
+      <nav class="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 overflow-x-auto custom-scrollbar">
+        <button onclick="switchPage('activists')" id="tab-activists" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition text-amber-400 bg-slate-900 shadow-xs">
+          <span>👥</span>
+          <span>1. מאגר פעילים</span>
+          <span id="badge-activists-count" class="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+
+        <button onclick="switchPage('map')" id="tab-map" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+          <span>🗺️</span>
+          <span>2. מפת עמדות</span>
+          <span id="badge-stands-count" class="bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded-full">0 עמדות</span>
+        </button>
+
+        <button onclick="switchPage('stands')" id="tab-stands" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+          <span>📋</span>
+          <span>3. שיבוץ שבועי</span>
+          <span id="header-week-pill" class="bg-blue-500/20 text-blue-300 text-[10px] px-1.5 py-0.2 rounded-full">פרשת לך לך</span>
+        </button>
+
+        <button onclick="switchPage('reflections')" id="tab-reflections" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+          <span>💡</span>
+          <span>4. רפלקציות ו-AI</span>
+          <span class="bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0.2 rounded-full">למידה</span>
+        </button>
+
+        <button onclick="switchPage('leads')" id="tab-leads" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+          <span>🌱</span>
+          <span>5. מתעניינים בתשובה</span>
+          <span id="badge-leads-count" class="bg-rose-500/20 text-rose-300 text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
+        </button>
+
+        <!-- Admin Only Tab (Hidden for Coordinators) -->
+        <button onclick="switchPage('admin')" id="tab-admin" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 hover:text-white transition">
+          <span>🔐</span>
+          <span>6. ניהול רכזים</span>
+        </button>
+      </nav>
+
+      <!-- Current Logged-in User & Quick Action Buttons -->
+      <div class="flex items-center gap-2.5 text-xs">
+        <div class="bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
+          <span id="current-user-role-icon">👑</span>
+          <span id="current-user-display" class="text-slate-200 font-bold">מנהל תוכנה</span>
+          <button onclick="performLogout()" class="text-slate-400 hover:text-red-400 mr-1 font-semibold text-[11px]" title="התנתק מהמערכת">התנתק 🚪</button>
+        </div>
+        <button onclick="openAddActivistModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow">
+          <span>+</span>
+          <span>פעיל חדש</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex-1">
+
+    <!-- ========================================== -->
+    <!-- PAGE 1: מאגר פעילים (אקורדיון רשימות נפתחות) -->
+    <!-- ========================================== -->
+    <section id="page-activists" class="page-view space-y-6">
+      
+      <!-- Top Actions & Search Bar -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <span>👥 מאגר פעילים והון אנושי (תצוגת אקורדיון)</span>
+            <span class="text-xs font-normal text-slate-500">• רשימות נפתחות עם עריכה מלאה לכל פעיל</span>
+          </h2>
+          <p class="text-xs text-slate-500">ניהול פרטי קשר, זמינות שבועית והערות סטטוס מתחלפות למשמרות חמישי</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <input type="text" id="activist-search" oninput="renderActivistsAccordion()" placeholder="חיפוש לפי שם, טלפון או עיר..." class="w-64 pl-3 pr-8 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500 bg-slate-50 focus:bg-white transition">
+            <span class="absolute right-2.5 top-2.5 text-xs text-slate-400">🔍</span>
+          </div>
+          
+          <button onclick="expandAllActivists(true)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs transition">
+            פתח הכל ⮟
+          </button>
+          <button onclick="expandAllActivists(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs transition">
+            סגור הכל ⮝
+          </button>
+
+          <button onclick="openAddActivistModal()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs">
+            <span>+</span>
+            <span>הוספת פעיל</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Segment Tabs: פעילים קיימים vs פוטנציאליים -->
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <div class="flex items-center gap-2">
+          <button onclick="setActivistCategory('existing')" id="btn-cat-existing" class="cat-pill font-bold text-xs px-4 py-2 rounded-xl bg-slate-900 text-white transition shadow-xs flex items-center gap-1.5">
+            <span>פעילים קיימים וקבועים</span>
+            <span id="badge-existing-count" class="bg-white/20 text-white px-2 py-0.5 rounded-full text-[10px]">12</span>
+          </button>
+
+          <button onclick="setActivistCategory('potential')" id="btn-cat-potential" class="cat-pill font-semibold text-xs px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1.5">
+            <span>פוטנציאליים וחדשים בתהליך</span>
+            <span id="badge-potential-count" class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-bold">6</span>
+          </button>
+        </div>
+
+        <div class="text-xs text-slate-500">
+          סה"כ במאגר: <strong id="total-activists-stat" class="text-slate-800 font-bold">18</strong> פעילים
+        </div>
+      </div>
+
+      <!-- Activists Accordion List Container -->
+      <div id="activists-accordion-container" class="space-y-2.5">
+        <!-- Rendered dynamically as Accordion via JavaScript -->
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- PAGE 2: מפת עמדות אינטראקטיבית (GIS MAP) -->
+    <!-- ========================================== -->
+    <section id="page-map" class="page-view hidden space-y-4">
+      
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <span>🗺️ מפת עמדות ומוקדי פעילות בשטח</span>
+            <span class="text-xs font-normal text-slate-500">• לחיצה על עמדה מובילה ישירות לשיבוץ שלה בדף 3</span>
+          </h2>
+          <p class="text-xs text-slate-500">מיקום גיאוגרפי של דוכני השטח ומרכזי השיעורים בירושלים וברחבי הארץ</p>
+        </div>
+
+        <!-- Filter pills for map -->
+        <div class="flex items-center gap-2 text-xs">
+          <button onclick="filterMapMarkers('all')" class="map-filter-btn px-3 py-1.5 bg-slate-900 text-white font-bold rounded-lg transition">הכל (5)</button>
+          <button onclick="filterMapMarkers('stand')" class="map-filter-btn px-3 py-1.5 bg-amber-100 text-amber-900 font-bold rounded-lg hover:bg-amber-200 transition">🟡 דוכני שטח (4)</button>
+          <button onclick="filterMapMarkers('center')" class="map-filter-btn px-3 py-1.5 bg-blue-100 text-blue-900 font-bold rounded-lg hover:bg-blue-200 transition">🔵 מרכז שיעורים (1)</button>
+          <button onclick="openAddStandModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs">
+            <span>+</span>
+            <span>עמדה חדשה</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Split View: Map + Live Stand List Drawer -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[620px]">
+        
+        <!-- Live Side List -->
+        <div class="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col h-full shadow-xs">
+          <div class="font-bold text-xs text-slate-700 pb-2 border-b border-slate-100 flex items-center justify-between">
+            <span>רשימת עמדות בירושלים</span>
+            <span class="text-[10px] text-slate-400">לחץ למיקוד ושיבוץ</span>
+          </div>
+
+          <div id="map-stand-list" class="space-y-2 mt-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Interactive Leaflet Map Container -->
+        <div class="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 p-1.5 h-full relative shadow-xs">
+          <div id="leaflet-map" class="w-full h-full rounded-xl z-0"></div>
+
+          <!-- Floating Map Legend -->
+          <div class="absolute bottom-4 right-4 bg-white/95 backdrop-blur-xs p-3 rounded-xl border border-slate-200/80 shadow-md text-xs z-10 space-y-1.5">
+            <div class="font-bold text-slate-800 text-[11px] border-b border-slate-100 pb-1">מקרא עמדות ומצב איוש</div>
+            <div class="flex items-center gap-2 text-slate-600">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <span>מאוישת במלואה + מפקד עמדה</span>
+            </div>
+            <div class="flex items-center gap-2 text-slate-600">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <span>איוש חלקי (חסר פעיל)</span>
+            </div>
+            <div class="flex items-center gap-2 text-slate-600">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+              <span>לא מאוישת / דורשת תשומת לב</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- PAGE 3: ניהול עמדות, שיבוץ שבועי ומכונת זמן -->
+    <!-- ========================================== -->
+    <section id="page-stands" class="page-view hidden space-y-6">
+      
+      <!-- Top Weekly Navigator & Time Machine (חודשיים אחורה וקדימה) -->
+      <div class="bg-gradient-to-l from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-md space-y-4">
+        
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-700/60 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-md">מכונת זמן לפי פרשות השבוע</span>
+              <span class="text-xs text-slate-300">מעקב חודשיים קדימה וחודשיים אחורה לפי סדר פרשות השבוע</span>
+            </div>
+            <h2 class="text-xl font-black mt-1">לוח שיבוצי שטח ועמדות ליל שישי לפי פרשות השבוע</h2>
+          </div>
+
+          <!-- Smart Duplicate & Copy Roster Buttons -->
+          <div class="flex items-center gap-2">
+            <button onclick="clonePreviousWeekRoster()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow">
+              <span>🔄</span>
+              <span>שכפל שיבוץ משבוע קודם כברירת מחדל</span>
+            </button>
+            <button onclick="copyWeeklyRosterForWhatsapp()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow">
+              <span>📋</span>
+              <span>העתק שיבוץ שבועי לוואטסאפ</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Weeks Selector Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-800/90 p-3 rounded-xl border border-slate-700">
+          
+          <!-- Prev / Next Week Buttons -->
+          <div class="flex items-center gap-2">
+            <button onclick="navigateWeek(-1)" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1">
+              <span>◀</span>
+              <span>שבוע קודם</span>
+            </button>
+
+            <!-- Weeks Dropdown Selector -->
+            <select id="select-week-navigator" onchange="onWeekDropdownChanged()" class="bg-slate-900 border border-slate-600 text-amber-400 font-bold px-3 py-1.5 rounded-lg outline-none">
+              <!-- Rendered via JS: 16 weeks spanning 2 months back & forward -->
+            </select>
+
+            <button onclick="navigateWeek(1)" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1">
+              <span>שבוע הבא</span>
+              <span>▶</span>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span id="current-week-status-badge" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-3 py-1 rounded-full text-xs">
+              שבוע נוכחי • פעילות סגורה
+            </span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Live Stands Cards Grid -->
+      <div id="stands-roster-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Rendered dynamically via JavaScript -->
+      </div>
+
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- PAGE 4: מרכז רפלקציות ולמידה (AI & Insights) -->
+    <!-- ========================================== -->
+    <section id="page-reflections" class="page-view hidden space-y-6">
+      
+      <!-- Top Overview Banner -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-bold text-slate-900">💡 מרכז רפלקציות, סיכומי משמרות ותובנות AI</h2>
+            <span class="text-xs bg-purple-100 text-purple-800 font-bold px-2.5 py-0.5 rounded-full">למידה ארגונית</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">ריכוז כל התשאולים והסיכומים שהרכז מילא מחמישי בלילה, פילוח לפי פעיל/עמדה ותיוג בינה מלאכותית</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="openNewReflectionModal()" class="bg-purple-700 hover:bg-purple-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-2 shadow-xs">
+            <span>+</span>
+            <span>הוספת רפלקציית משמרת</span>
+          </button>
+          <button onclick="generateAILearningReport()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs">
+            <span>✨</span>
+            <span>הפקת לקט תובנות ו-AI</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters Row: By Activist, By Stand, and By AI Tag -->
+      <div class="bg-slate-100/80 p-3.5 rounded-xl border border-slate-200 flex flex-wrap items-center gap-3 text-xs">
+        <span class="font-bold text-slate-700">סינון חכם:</span>
+        
+        <!-- Filter by Stand -->
+        <select id="reflection-filter-stand" onchange="renderReflections()" class="p-2 border border-slate-300 rounded-lg bg-white outline-none font-semibold text-slate-700">
+          <option value="all">כל העמדות (5)</option>
+          <option value="כיכר החתולות">כיכר החתולות</option>
+          <option value="כיכר ציון">כיכר ציון</option>
+          <option value="גן הפעמון">גן הפעמון</option>
+          <option value="שוק מחנה יהודה">שוק מחנה יהודה</option>
+          <option value="מרכז השיעורים נחלאות">מרכז השיעורים נחלאות</option>
+        </select>
+
+        <!-- Filter by Activist -->
+        <select id="reflection-filter-activist" onchange="renderReflections()" class="p-2 border border-slate-300 rounded-lg bg-white outline-none font-semibold text-slate-700">
+          <option value="all">כל הפעילים</option>
+          <option value="יוסף ויסמן">יוסף ויסמן</option>
+          <option value="אביתר כהן">אביתר כהן</option>
+          <option value="דוד לוי">דוד לוי</option>
+          <option value="איתי שטרן">איתי שטרן</option>
+        </select>
+
+        <!-- Filter by AI Tag (Focus on Repentance & Judaism) -->
+        <div class="flex items-center gap-1.5 overflow-x-auto">
+          <button onclick="setReflectionTagFilter('all')" class="ref-tag-btn px-2.5 py-1 bg-slate-900 text-white font-bold rounded-md">הכל</button>
+          <button onclick="setReflectionTagFilter('התעניינות ביהדות / חזרה בתשובה')" class="ref-tag-btn px-2.5 py-1 bg-white border border-slate-300 text-slate-700 font-semibold rounded-md hover:bg-slate-200">🏷️ חזרה בתשובה</button>
+          <button onclick="setReflectionTagFilter('שאלות באמונה והשקפה')" class="ref-tag-btn px-2.5 py-1 bg-white border border-slate-300 text-slate-700 font-semibold rounded-md hover:bg-slate-200">🏷️ שאלות באמונה</button>
+          <button onclick="setReflectionTagFilter('הנחת תפילין / ציצית')" class="ref-tag-btn px-2.5 py-1 bg-white border border-slate-300 text-slate-700 font-semibold rounded-md hover:bg-slate-200">🏷️ תפילין וציצית</button>
+          <button onclick="setReflectionTagFilter('רצון להגיע לשיעור תורה')" class="ref-tag-btn px-2.5 py-1 bg-white border border-slate-300 text-slate-700 font-semibold rounded-md hover:bg-slate-200">🏷️ שיעור תורה</button>
+          <button onclick="setReflectionTagFilter('אירוח לשבת / סעודת שבת')" class="ref-tag-btn px-2.5 py-1 bg-white border border-slate-300 text-slate-700 font-semibold rounded-md hover:bg-slate-200">🏷️ אירוח לשבת</button>
+          <button onclick="setReflectionTagFilter('ליווי תורני אישי (חברותא)')" class="ref-tag-btn px-2.5 py-1 bg-white border border-slate-300 text-slate-700 font-semibold rounded-md hover:bg-slate-200">🏷️ חברותא אישית</button>
+          <button onclick="setReflectionTagFilter('התחזקות בשמירת שבת ומצוות')" class="ref-tag-btn px-2.5 py-1 bg-white border border-slate-300 text-slate-700 font-semibold rounded-md hover:bg-slate-200">🏷️ שמירת שבת</button>
+        </div>
+      </div>
+
+      <!-- Reflections Feed -->
+      <div id="reflections-feed" class="space-y-4">
+        <!-- Rendered dynamically via JavaScript -->
+      </div>
+
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- PAGE 5: מתעניינים בתשובה וליווי נוער -->
+    <!-- ========================================== -->
+    <section id="page-leads" class="page-view hidden space-y-6">
+      
+      <!-- Top Overview Banner -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span>🌱 מאגר מתעניינים וליווי בתשובה</span>
+              <span class="text-xs bg-rose-100 text-rose-800 font-bold px-2.5 py-0.5 rounded-full" id="leads-total-badge">5 מתעניינים</span>
+            </h2>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">ריכוז כל הצעירים והנוער שפגשנו בדוכנים, עם תיוג מהיר של מה שביקשו בתשובה ועדכון סטטוס ליווי שוטף בלייב</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="openAddLeadModal()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-2 shadow-xs">
+            <span>+</span>
+            <span>הוספת מתעניין חדש</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters & Quick Search -->
+      <div class="bg-slate-100/80 p-3.5 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+        
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="font-bold text-slate-700">סטטוס ליווי:</span>
+          
+          <select id="lead-filter-status" onchange="renderLeads()" class="p-2 border border-slate-300 rounded-lg bg-white outline-none font-semibold text-slate-700">
+            <option value="all">כל הסטטוסים (הכל)</option>
+            <option value="ממתין ליצירת קשר">⏳ ממתין ליצירת קשר</option>
+            <option value="בוצעה שיחה ראשונית">📞 בוצעה שיחה ראשונית</option>
+            <option value="שובץ לחברותא">📖 שובץ לחברותא</option>
+            <option value="הוזמן לאירוח שבת">🕯️ הוזמן לאירוח שבת</option>
+            <option value="בליווי תורני שוטף">🤝 בליווי תורני שוטף</option>
+            <option value="נקלט בשיעור קבוע">✅ נקלט בשיעור קבוע</option>
+          </select>
+
+          <!-- Filter by Interest / Repentance Category -->
+          <span class="font-bold text-slate-700 mr-2">תחום התעניינות:</span>
+          <select id="lead-filter-interest" onchange="renderLeads()" class="p-2 border border-slate-300 rounded-lg bg-white outline-none font-semibold text-slate-700">
+            <option value="all">כל התחומים</option>
+            <option value="הנחת תפילין וציצית">הנחת תפילין וציצית</option>
+            <option value="שיעורי תורה">שיעורי תורה</option>
+            <option value="אירוח לשבת">אירוח לשבת</option>
+            <option value="חברותא אישית">חברותא אישית</option>
+            <option value="שאלות באמונה והשקפה">שאלות באמונה והשקפה</option>
+            <option value="התחזקות במצוות ושבת">התחזקות במצוות ושבת</option>
+          </select>
+        </div>
+
+        <!-- Search Input -->
+        <div class="relative w-full sm:w-64">
+          <input type="text" id="lead-search-input" oninput="renderLeads()" placeholder="חפש לפי שם, טלפון, הערה..." class="w-full pl-3 pr-8 py-2 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:border-rose-500">
+          <span class="absolute right-2.5 top-2.5 text-slate-400">🔍</span>
+        </div>
+
+      </div>
+
+      <!-- Leads Grid Container -->
+      <div id="leads-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Rendered dynamically via JavaScript -->
+      </div>
+
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- PAGE 6: ניהול רכזים והרשאות (מנהל תוכנה בלבד) -->
+    <!-- ========================================== -->
+    <section id="page-admin" class="page-view hidden space-y-6">
+      
+      <!-- Top Admin Banner -->
+      <div class="bg-gradient-to-l from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-md flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-md">גישת מנהל תוכנה (Admin)</span>
+            <span class="text-xs text-slate-300">ניהול חשבונות רכזים, סיסמאות אישיות וגיבוי מערכת</span>
+          </div>
+          <h2 class="text-xl font-black mt-1">🔐 מרכז ניהול רכזים והרשאות מערכת</h2>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="exportFullDatabaseBackup()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
+            <span>💾</span>
+            <span>ייצוא גיבוי מלא (JSON)</span>
+          </button>
+          <button onclick="openUserModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow">
+            <span>+</span>
+            <span>הוספת רכז / משתמש חדש</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Coordinators & Admins Table/Cards -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-sm text-slate-900">משתמשים ורכזים מורשים במערכת</h3>
+            <p class="text-xs text-slate-500">כל רכז מתחבר עם שם המשתמש/אימייל והסיסמה האישית שלו</p>
+          </div>
+          <span id="admin-users-count-badge" class="bg-slate-100 text-slate-700 font-bold text-xs px-3 py-1 rounded-full">3 משתמשים</span>
+        </div>
+
+        <div id="admin-users-list" class="divide-y divide-slate-100">
+          <!-- Rendered dynamically via JavaScript -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL: הוספת / עריכת רכז (מנהל תוכנה) -->
+  <!-- ========================================== -->
+  <div id="modal-user" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="font-bold text-base text-slate-900" id="modal-user-title">🔐 הוספת רכז חדש למערכת</h3>
+          <p class="text-xs text-slate-500">הגדרת פרטי התחברות אישיים והרשאה</p>
+        </div>
+        <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <input type="hidden" id="user-edit-id">
+
+      <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">שם מלא של הרכז *</label>
+            <input type="text" id="user-full-name" placeholder="למשל: אביתר כהן" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-semibold">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">סוג הרשאה *</label>
+            <select id="user-role" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-bold">
+              <option value="coordinator">📋 רכז שטח (Coordinator)</option>
+              <option value="admin">👑 מנהל תוכנה (Admin)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">שם משתמש לכניסה *</label>
+            <input type="text" id="user-username" placeholder="evyatar" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono text-left" dir="ltr">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">סיסמה אישית *</label>
+            <input type="text" id="user-password" placeholder="123456" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono text-left" dir="ltr">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">כתובת אימייל</label>
+            <input type="email" id="user-email" placeholder="evyatar@hashivenu.org" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono text-left" dir="ltr">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">טלפון נייד</label>
+            <input type="tel" id="user-phone" placeholder="052-7654321" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono text-left" dir="ltr">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">גזרת אחריות / הערה</label>
+          <input type="text" id="user-region" placeholder="למשל: ירושלים - מרכז העיר וכיכר ציון" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+        <button onclick="closeUserModal()" class="px-4 py-2 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100">ביטול</button>
+        <button onclick="saveUserModal()" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold rounded-xl text-xs shadow-md">שמור פרטי רכז</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL: עריכה מלאה לכל הפרטים של פעיל -->
+  <!-- ========================================== -->
+  <div id="modal-edit-activist" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
+            <span>✏️ עריכת כל הפרטים לפעיל</span>
+          </h3>
+          <p class="text-xs text-slate-500" id="modal-edit-act-subtitle">עדכון פרטי קשר, זמינות שבועית והערות שטח</p>
+        </div>
+        <button onclick="closeEditActivistModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <input type="hidden" id="edit-act-id">
+
+      <div class="space-y-3.5 text-xs">
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">שם מלא *</label>
+            <input type="text" id="edit-act-name" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-semibold">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">סיווג מאגר</label>
+            <select id="edit-act-category" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="existing">פעיל קיים / קבוע</option>
+              <option value="potential">פוטנציאלי / חדש</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">טלפון נייד *</label>
+            <input type="tel" id="edit-act-phone" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono text-left" dir="ltr">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">כתובת דוא"ל</label>
+            <input type="email" id="edit-act-email" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono text-left" dir="ltr">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">זמינות לליל שישי הקרוב</label>
+            <select id="edit-act-sms" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="true">✅ זמין לחמישי הקרוב</option>
+              <option value="false">⏳ טרם אישר הגעה השבוע</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">סטטוס קליטה / פעילות</label>
+            <select id="edit-act-status" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="פעיל מאושר">פעיל מאושר</option>
+              <option value="ראיון רכז">ראיון רכז</option>
+              <option value="שיחת היכרות ראשונית">שיחת היכרות ראשונית</option>
+              <option value="ממתין לשיבוץ ראשון">ממתין לשיבוץ ראשון</option>
+              <option value="לא זמין לתקופה">לא זמין לתקופה</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">עמדה מועדפת / שיבוץ קבוע</label>
+          <select id="edit-act-preferred-stand" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+            <option value="">ללא עמדה קבועה (פנוי לפי צורך)</option>
+            <option value="כיכר החתולות">כיכר החתולות</option>
+            <option value="כיכר ציון">כיכר ציון</option>
+            <option value="גן הפעמון">גן הפעמון</option>
+            <option value="שוק מחנה יהודה">שוק מחנה יהודה</option>
+            <option value="מרכז השיעורים נחלאות">מרכז השיעורים נחלאות</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">הערות סטטוס מתחלפות (עדכון שוטף של הרכז)</label>
+          <textarea id="edit-act-notes" rows="3" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-normal leading-relaxed"></textarea>
+        </div>
+
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+        <button onclick="deleteActivistFromModal()" class="text-red-500 hover:text-red-700 font-bold text-xs flex items-center gap-1">
+          <span>🗑️ מחק פעיל</span>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button onclick="closeEditActivistModal()" class="px-4 py-2 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100">ביטול</button>
+          <button onclick="saveActivistFullEdit()" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-md">שמור שינויים</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL: הוספת פעיל חדש למאגר -->
+  <!-- ========================================== -->
+  <div id="modal-activist" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
+          <span>👤 הוספת פעיל למאגר</span>
+        </h3>
+        <button onclick="closeAddActivistModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">שם מלא *</label>
+          <input type="text" id="modal-act-name" placeholder="למשל: דניאל גולדברג" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">טלפון נייד *</label>
+            <input type="tel" id="modal-act-phone" placeholder="050-0000000" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono text-left" dir="ltr">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">דואר אלקטרוני</label>
+            <input type="email" id="modal-act-email" placeholder="name@domain.com" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono text-left" dir="ltr">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">סיווג מאגר</label>
+            <select id="modal-act-category" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="existing">פעיל קיים / קבוע</option>
+              <option value="potential">פוטנציאלי / חדש</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">סטטוס קליטה / זמינות</label>
+            <select id="modal-act-status" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="פעיל מאושר">פעיל מאושר</option>
+              <option value="שיחת היכרות ראשונית">שיחת היכרות ראשונית</option>
+              <option value="ראיון רכז">ראיון רכז</option>
+              <option value="ממתין לשיבוץ ראשון">ממתין לשיבוץ ראשון</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">הערת סטטוס מתחלפת (רכז)</label>
+          <textarea id="modal-act-notes" rows="2" placeholder="למשל: זמין השבוע רק מחצות, בעל רכב, מעדיף את כיכר החתולות..." class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500"></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button onclick="closeAddActivistModal()" class="px-4 py-2 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100">ביטול</button>
+        <button onclick="saveNewActivist()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs">שמור פעיל במאגר</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL: הזנת רפלקציה חדשה לעמדה -->
+  <!-- ========================================== -->
+  <div id="modal-reflection" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-5 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
+            <span>📝 תשאול וסיכום רפלקציה ממשמרת חמישי</span>
+          </h3>
+          <p class="text-xs text-slate-500">מילוי ע"י הרכז על בסיס השיחה עם מפקד העמדה והפעילים</p>
+        </div>
+        <button onclick="closeNewReflectionModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">עמדה *</label>
+            <select id="modal-ref-stand" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="כיכר החתולות">כיכר החתולות</option>
+              <option value="כיכר ציון">כיכר ציון</option>
+              <option value="גן הפעמון">גן הפעמון</option>
+              <option value="שוק מחנה יהודה">שוק מחנה יהודה</option>
+              <option value="מרכז השיעורים נחלאות">מרכז השיעורים נחלאות</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">פעילים שלקחו חלק במשמרת *</label>
+            <input type="text" id="modal-ref-activists" placeholder="יוסף ויסמן, אביתר כהן" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">כמות נוער שפגשנו</label>
+            <input type="number" id="modal-ref-youth-count" value="35" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none font-bold text-center">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">טווח גילאים</label>
+            <input type="text" id="modal-ref-age-range" value="16 - 22" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none text-center">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">שעות בפועל</label>
+            <input type="text" id="modal-ref-hours" value="23:00 - 02:45" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none text-center" dir="ltr">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">תיאור האווירה והגזרה מסביב</label>
+          <textarea id="modal-ref-atmosphere" rows="2" placeholder="תאר את תחושת הרחוב, נוכחות משטרה/אלכוהול, פתיחות הנוער לשיחה..." class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">סיפור מיוחד / שיחת עומק מהלילה</label>
+          <textarea id="modal-ref-story" rows="3" placeholder="פרט מקרה מיוחד, נער שפתח את הלב, שיחה מעניינת שנוצרה בדוכן..." class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">נוער לליווי והמשך טיפול (שם + טלפון + צורך)</label>
+          <input type="text" id="modal-ref-leads" placeholder="למשל: דורון 052-8765432 (מחפש מסגרת לינה), אביב (מעוניין בשיעור תורה)" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-500">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">תגיות AI חכמות — התקרבות ליהדות ותשובה</label>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
+              <input type="checkbox" name="ref-ai-tag" value="התעניינות ביהדות / חזרה בתשובה" checked class="rounded text-purple-600">
+              <span>התעניינות ביהדות / חזרה בתשובה</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
+              <input type="checkbox" name="ref-ai-tag" value="שאלות באמונה והשקפה" checked class="rounded text-purple-600">
+              <span>שאלות באמונה והשקפה</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
+              <input type="checkbox" name="ref-ai-tag" value="הנחת תפילין / ציצית" checked class="rounded text-purple-600">
+              <span>הנחת תפילין / ציצית</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
+              <input type="checkbox" name="ref-ai-tag" value="רצון להגיע לשיעור תורה" class="rounded text-purple-600">
+              <span>רצון להגיע לשיעור תורה</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
+              <input type="checkbox" name="ref-ai-tag" value="אירוח לשבת / סעודת שבת" class="rounded text-purple-600">
+              <span>אירוח לשבת / סעודת שבת</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
+              <input type="checkbox" name="ref-ai-tag" value="שיחת נפש וחיפוש משמעות" class="rounded text-purple-600">
+              <span>שיחת נפש וחיפוש משמעות</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
+              <input type="checkbox" name="ref-ai-tag" value="ליווי תורני אישי (חברותא)" class="rounded text-purple-600">
+              <span>ליווי תורני אישי (חברותא)</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
+              <input type="checkbox" name="ref-ai-tag" value="התחזקות בשמירת שבת ומצוות" class="rounded text-purple-600">
+              <span>התחזקות בשמירת שבת ומצוות</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+        <button onclick="closeNewReflectionModal()" class="px-4 py-2 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100">ביטול</button>
+        <button onclick="saveNewReflection()" class="px-5 py-2 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-xl text-xs shadow-md">שמור רפלקציה במאגר</button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL: הוספת / עריכת מתעניין בתשובה -->
+  <!-- ========================================== -->
+  <div id="modal-lead" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="font-bold text-base text-slate-900 flex items-center gap-2" id="modal-lead-title">
+            <span>🌱 כרטיס מתעניין וליווי בתשובה</span>
+          </h3>
+          <p class="text-xs text-slate-500">תיעוד צרכים רוחניים, תיוג מהיר וקביעת פעיל מלווה</p>
+        </div>
+        <button onclick="closeLeadModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <input type="hidden" id="lead-edit-id">
+
+      <div class="space-y-3.5 text-xs">
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">שם הצעיר / הנער *</label>
+            <input type="text" id="lead-name" placeholder="למשל: יונתן אברהם" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-rose-500 font-semibold">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">טלפון ליצירת קשר *</label>
+            <input type="tel" id="lead-phone" placeholder="050-1234567" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-rose-500 font-mono text-left" dir="ltr">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">עמדת מפגש</label>
+            <select id="lead-stand" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="כיכר החתולות">כיכר החתולות</option>
+              <option value="כיכר ציון">כיכר ציון</option>
+              <option value="גן הפעמון">גן הפעמון</option>
+              <option value="שוק מחנה יהודה">שוק מחנה יהודה</option>
+              <option value="מרכז השיעורים נחלאות">מרכז השיעורים נחלאות</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">סטטוס ליווי נוכחי</label>
+            <select id="lead-status" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="ממתין ליצירת קשר">⏳ ממתין ליצירת קשר</option>
+              <option value="בוצעה שיחה ראשונית">📞 בוצעה שיחה ראשונית</option>
+              <option value="שובץ לחברותא">📖 שובץ לחברותא</option>
+              <option value="הוזמן לאירוח שבת">🕯️ הוזמן לאירוח שבת</option>
+              <option value="בליווי תורני שוטף">🤝 בליווי תורני שוטף</option>
+              <option value="נקלט בשיעור קבוע">✅ נקלט בשיעור קבוע</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">פעיל מלווה אחראי (מהמאגר)</label>
+          <select id="lead-assigned-activist" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+            <!-- Rendered from activistsData -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">מה רצה בהקשר של חזרה בתשובה? (תיוג מהיר)</label>
+          <div class="grid grid-cols-2 gap-2 pt-1" id="lead-interest-checkboxes">
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 p-2 rounded-lg cursor-pointer">
+              <input type="checkbox" name="lead-tag" value="הנחת תפילין וציצית" class="rounded text-rose-600">
+              <span>הנחת תפילין וציצית</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 p-2 rounded-lg cursor-pointer">
+              <input type="checkbox" name="lead-tag" value="שיעורי תורה" class="rounded text-rose-600">
+              <span>שיעורי תורה</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 p-2 rounded-lg cursor-pointer">
+              <input type="checkbox" name="lead-tag" value="אירוח לשבת" class="rounded text-rose-600">
+              <span>אירוח לשבת</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 p-2 rounded-lg cursor-pointer">
+              <input type="checkbox" name="lead-tag" value="חברותא אישית" class="rounded text-rose-600">
+              <span>חברותא אישית</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 p-2 rounded-lg cursor-pointer">
+              <input type="checkbox" name="lead-tag" value="שאלות באמונה והשקפה" class="rounded text-rose-600">
+              <span>שאלות באמונה והשקפה</span>
+            </label>
+            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 p-2 rounded-lg cursor-pointer">
+              <input type="checkbox" name="lead-tag" value="התחזקות במצוות ושבת" class="rounded text-rose-600">
+              <span>התחזקות במצוות ושבת</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">הערות ליווי ומעקב (עדכון רכז / שיחות)</label>
+          <textarea id="lead-notes" rows="3" placeholder="פרט את תוכן השיחה, רקע של הבחור, התקדמות..." class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-rose-500 font-normal leading-relaxed"></textarea>
+        </div>
+
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+        <button onclick="deleteLeadFromModal()" id="btn-delete-lead" class="text-red-500 hover:text-red-700 font-bold text-xs flex items-center gap-1 hidden">
+          <span>🗑️ מחק מתעניין</span>
+        </button>
+        <div class="flex items-center gap-2 mr-auto">
+          <button onclick="closeLeadModal()" class="px-4 py-2 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100">ביטול</button>
+          <button onclick="saveLeadModal()" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-md">שמור פרטי מתעניין</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- JAVASCRIPT APPLICATION CORE -->
+  <script>
+    // --- 1. STATE & WEEKS TIME MACHINE ---
+    let currentActivistCategory = 'existing';
+    let currentMapFilter = 'all';
+    let currentRefTagFilter = 'all';
+    let leafletMapInstance = null;
+    let mapMarkers = [];
+
+    // Expanded accordion state (activist IDs)
+    let openAccordionIds = new Set([1]); // First activist open by default
+
+    // Weeks Array: 2 months back (8 weeks) + current + 2 months forward (8 weeks) strictly by Torah Portions (פרשות השבוע)
+    const weeksList = [
+      { id: 'w-prev-8', parasha: 'פרשת שופטים', name: 'פרשת שופטים (ה\' אלול)', date: 'ה\' אלול • 03/09', label: 'לפני חודשיים', status: 'הושלם בעבר' },
+      { id: 'w-prev-7', parasha: 'פרשת כי תצא', name: 'פרשת כי תצא (י"ב אלול)', date: 'י"ב אלול • 10/09', label: 'לפני 7 שבועות', status: 'הושלם בעבר' },
+      { id: 'w-prev-6', parasha: 'פרשת כי תבוא', name: 'פרשת כי תבוא (י"ט אלול)', date: 'י"ט אלול • 17/09', label: 'לפני 6 שבועות', status: 'הושלם בעבר' },
+      { id: 'w-prev-5', parasha: 'פרשת נצבים-וילך', name: 'פרשת נצבים-וילך (כ"ו אלול)', date: 'כ"ו אלול • 24/09', label: 'לפני 5 שבועות', status: 'הושלם בעבר' },
+      { id: 'w-prev-4', parasha: 'פרשת האזינו', name: 'פרשת האזינו • שבת שובה (ד\' תשרי)', date: 'ד\' תשרי • 01/10', label: 'עשרת ימי תשובה', status: 'הושלם בעבר' },
+      { id: 'w-prev-3', parasha: 'חול המועד סוכות', name: 'חול המועד סוכות (י"ד תשרי)', date: 'י"ד תשרי • 08/10', label: 'ערב חג סוכות', status: 'הושלם בעבר' },
+      { id: 'w-prev-2', parasha: 'פרשת בראשית', name: 'פרשת בראשית (כ"א תשרי)', date: 'כ"א תשרי • 15/10', label: 'לפני שבועיים', status: 'הושלם בעבר' },
+      { id: 'w-prev-1', parasha: 'פרשת נח', name: 'פרשת נח (כ"ח תשרי)', date: 'כ"ח תשרי • 22/10', label: 'שבוע שעבר', status: 'הושלם בעבר' },
+      
+      // Current Week (Default)
+      { id: 'w-current', parasha: 'פרשת לך לך', name: 'פרשת לך לך (ה\' חשוון)', date: 'ה\' חשוון • 29/10', label: 'חמישי הקרוב • נוכחי', status: 'פעילות סגורה' },
+
+      // Future Weeks (Up to 2 months forward)
+      { id: 'w-next-1', parasha: 'פרשת וירא', name: 'פרשת וירא (י"ב חשוון)', date: 'י"ב חשוון • 05/11', label: 'עוד שבוע', status: 'תכנון פתוח' },
+      { id: 'w-next-2', parasha: 'פרשת חיי שרה', name: 'פרשת חיי שרה (י"ט חשוון)', date: 'י"ט חשוון • 12/11', label: 'עוד שבועיים', status: 'תכנון פתוח' },
+      { id: 'w-next-3', parasha: 'פרשת תולדות', name: 'פרשת תולדות (כ"ו חשוון)', date: 'כ"ו חשוון • 19/11', label: 'עוד 3 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-next-4', parasha: 'פרשת ויצא', name: 'פרשת ויצא (ד\' כסלו)', date: 'ד\' כסלו • 26/11', label: 'עוד חודש', status: 'תכנון פתוח' },
+      { id: 'w-next-5', parasha: 'פרשת וישלח', name: 'פרשת וישלח (י"א כסלו)', date: 'י"א כסלו • 03/12', label: 'עוד 5 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-next-6', parasha: 'פרשת וישב', name: 'פרשת וישב (י"ח כסלו)', date: 'י"ח כסלו • 10/12', label: 'עוד 6 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-next-7', parasha: 'פרשת מקץ', name: 'פרשת מקץ • חנוכה (כ"ה כסלו)', date: 'כ"ה כסלו • 17/12', label: 'נר ראשון חנוכה', status: 'תכנון פתוח' },
+      { id: 'w-next-8', parasha: 'פרשת ויגש', name: 'פרשת ויגש (ב\' טבת)', date: 'ב\' טבת • 24/12', label: 'עוד חודשיים', status: 'תכנון פתוח' }
+    ];
+
+    let currentWeekIndex = 8; // Points to 'w-current'
+
+    // Multi-week Store: Clean slate (Empty by default)
+    let weeklyRosters = {};
+
+    // Master Activists Database: Clean slate (Empty by default)
+    let activistsData = [];
+
+    // Master Stands Database: Clean slate (Empty by default)
+    let standsData = [];
+
+    // Master Reflections Database: Clean slate (Empty by default)
+    let reflectionsData = [];
+
+    // Master Leads Database: Clean slate (Empty by default)
+    let leadsData = [];
+
+
+
+    // --- 2. NAVIGATION & TABS ---
+    function switchPage(pageId) {
+      document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.page-tab').forEach(t => {
+        t.classList.remove('bg-slate-900', 'text-amber-400');
+        t.classList.add('text-slate-300');
+      });
+
+      const targetPage = document.getElementById(`page-${pageId}`);
+      const targetTab = document.getElementById(`tab-${pageId}`);
+      if (targetPage && targetTab) {
+        targetPage.classList.remove('hidden');
+        targetTab.classList.add('bg-slate-900', 'text-amber-400');
+        targetTab.classList.remove('text-slate-300');
+      }
+
+      if (pageId === 'map') {
+        setTimeout(initMapIfNeeded, 100);
+      }
+      if (pageId === 'stands') {
+        renderStandsRoster();
+      }
+      if (pageId === 'leads') {
+        renderLeads();
+      }
+      if (pageId === 'admin') {
+        renderAdminUsers();
+      }
+    }
+
+
+    // --- 3. PAGE 1: ACTIVISTS ACCORDION MODULE ---
+    function setActivistCategory(cat) {
+      currentActivistCategory = cat;
+      const btnExisting = document.getElementById('btn-cat-existing');
+      const btnPotential = document.getElementById('btn-cat-potential');
+
+      if (cat === 'existing') {
+        btnExisting.className = 'cat-pill font-bold text-xs px-4 py-2 rounded-xl bg-slate-900 text-white transition shadow-xs flex items-center gap-1.5';
+        btnPotential.className = 'cat-pill font-semibold text-xs px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1.5';
+      } else {
+        btnPotential.className = 'cat-pill font-bold text-xs px-4 py-2 rounded-xl bg-slate-900 text-white transition shadow-xs flex items-center gap-1.5';
+        btnExisting.className = 'cat-pill font-semibold text-xs px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1.5';
+      }
+      renderActivistsAccordion();
+    }
+
+    function toggleActivistAccordion(actId) {
+      if (openAccordionIds.has(actId)) {
+        openAccordionIds.delete(actId);
+      } else {
+        openAccordionIds.add(actId);
+      }
+      renderActivistsAccordion();
+    }
+
+    function expandAllActivists(expand) {
+      if (expand) {
+        activistsData.forEach(a => openAccordionIds.add(a.id));
+      } else {
+        openAccordionIds.clear();
+      }
+      renderActivistsAccordion();
+    }
+
+    function renderActivistsAccordion() {
+      const container = document.getElementById('activists-accordion-container');
+      const search = document.getElementById('activist-search').value.trim().toLowerCase();
+
+      let filtered = activistsData.filter(a => a.category === currentActivistCategory);
+
+      if (search) {
+        filtered = filtered.filter(a => 
+          a.name.toLowerCase().includes(search) || 
+          a.phone.includes(search) || 
+          (a.notes && a.notes.toLowerCase().includes(search)) ||
+          (a.preferredStand && a.preferredStand.toLowerCase().includes(search))
+        );
+      }
+
+      const existingCount = activistsData.filter(a => a.category === 'existing').length;
+      const potentialCount = activistsData.filter(a => a.category === 'potential').length;
+      document.getElementById('badge-existing-count').innerText = existingCount;
+      document.getElementById('badge-potential-count').innerText = potentialCount;
+      document.getElementById('badge-activists-count').innerText = activistsData.length;
+      document.getElementById('total-activists-stat').innerText = activistsData.length;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white p-10 rounded-2xl border border-slate-200 text-center space-y-3">
+            <div class="text-3xl">👥</div>
+            <h3 class="font-bold text-sm text-slate-800">מאגר הפעילים נקי ומוכן להזנה</h3>
+            <p class="text-xs text-slate-500">לחץ על "+ הוספת פעיל" כדי להוסיף פעילים חדשים למערכת</p>
+            <button onclick="openAddActivistModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-xs">+ הוספת פעיל ראשון</button>
+          </div>
+        `;
+        return;
+      }
+
+      // Get current week assignments
+      const currentRoster = getCurrentWeekRoster();
+
+      container.innerHTML = filtered.map(act => {
+        const isOpen = openAccordionIds.has(act.id);
+        
+        // Find if assigned to any stand in the current week
+        let assignedStandName = null;
+        let isLeadThisWeek = false;
+        for (const [sId, sData] of Object.entries(currentRoster)) {
+          if (sData.assignedIds.includes(act.id)) {
+            const standObj = standsData.find(s => s.id === sId);
+            if (standObj) assignedStandName = standObj.name;
+            if (sData.leadId === act.id) isLeadThisWeek = true;
+            break;
+          }
+        }
+
+        return `
+          <div class="bg-white rounded-2xl border ${isOpen ? 'border-amber-400/80 shadow-md ring-1 ring-amber-400/20' : 'border-slate-200/80 shadow-xs hover:border-slate-300'} transition overflow-hidden">
+            
+            <!-- Accordion Header Bar (Compact & Clear) -->
+            <div onclick="toggleActivistAccordion(${act.id})" class="p-3.5 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none bg-white hover:bg-slate-50/80 transition">
+              
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl ${isOpen ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-100 text-slate-700 font-bold'} border border-slate-200 flex items-center justify-center text-sm transition">
+                  ${act.name.slice(0, 1)}
+                </div>
+
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-bold text-sm text-slate-900">${act.name}</h4>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      act.status === 'פעיל מאושר' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                      act.status === 'ראיון רכז' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                      'bg-amber-50 text-amber-700 border border-amber-200'
+                    }">
+                      ${act.status}
+                    </span>
+                  </div>
+                  
+                  <div class="flex items-center gap-2 text-[11px] text-slate-500 font-mono" dir="ltr">
+                    <span>${act.phone}</span>
+                    <span class="text-slate-300">•</span>
+                    <span class="font-sans text-[11px] text-slate-400">${act.email || 'ללא דוא"ל'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Badges & Arrow -->
+              <div class="flex items-center gap-3 text-xs">
+                
+                <span class="text-[11px] font-medium hidden sm:flex items-center gap-1 ${act.smsVerified ? 'text-emerald-700' : 'text-slate-400'}">
+                  ${act.smsVerified ? '✅ זמין לחמישי' : '⏳ טרם אישר'}
+                </span>
+
+                ${assignedStandName ? `
+                  <span class="text-[10px] bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-lg border border-blue-200">
+                    ${isLeadThisWeek ? '⭐ מפקד: ' : '📍 משובץ: '}${assignedStandName}
+                  </span>
+                ` : `
+                  <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+                    לא משובץ השבוע
+                  </span>
+                `}
+
+                <span class="text-slate-400 text-sm font-bold transition transform ${isOpen ? 'rotate-180 text-amber-600' : ''}">
+                  ▼
+                </span>
+              </div>
+
+            </div>
+
+            <!-- Accordion Expandable Body (Full Details & Edit Button) -->
+            ${isOpen ? `
+              <div class="p-4 pt-1 bg-slate-50/60 border-t border-slate-100 text-xs space-y-3">
+                
+                <!-- Notes & Details Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  
+                  <!-- Current Shift & Preferences -->
+                  <div class="bg-white p-3 rounded-xl border border-slate-200/60 space-y-1">
+                    <span class="text-[10px] font-bold text-slate-400">עמדה מועדפת / קבועה:</span>
+                    <div class="font-semibold text-slate-800">${act.preferredStand || 'ללא עמדה מועדפת (פנוי לשיבוץ)'}</div>
+                    <div class="text-[10px] text-slate-500 pt-1">
+                      סטטוס השבוע: <strong class="text-slate-800">${assignedStandName ? assignedStandName + (isLeadThisWeek ? ' (מפקד)' : '') : 'ממתין לשיבוץ'}</strong>
+                    </div>
+                  </div>
+
+                  <!-- Weekly Availability Status -->
+                  <div class="bg-white p-3 rounded-xl border border-slate-200/60 space-y-1">
+                    <span class="text-[10px] font-bold text-slate-400">זמינות לליל שישי הקרוב:</span>
+                    <div class="font-semibold ${act.smsVerified ? 'text-emerald-700' : 'text-amber-700'}">
+                      ${act.smsVerified ? 'זמין ואישר הגעה למשמרת' : 'טרם אישר זמינות השבוע'}
+                    </div>
+                    <div class="text-[10px] text-slate-500 pt-1">
+                      מספר נייד: <span class="font-mono" dir="ltr">${act.phone}</span>
+                    </div>
+                  </div>
+
+                  <!-- Quick Contact -->
+                  <div class="bg-white p-3 rounded-xl border border-slate-200/60 flex items-center justify-between">
+                    <div>
+                      <span class="text-[10px] font-bold text-slate-400">יצירת קשר ישירה:</span>
+                      <div class="font-semibold text-slate-700 mt-0.5">חיוג או וואטסאפ</div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <a href="tel:${act.phone}" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700" title="חיוג">📞 שיחה</a>
+                      <a href="https://wa.me/972${act.phone.replace(/[^0-9]/g, '').slice(1)}" target="_blank" class="p-2 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-700 font-bold" title="וואטסאפ">💬 ווטסאפ</a>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Live Shift Notes (Editable by Coordinator) -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200/80">
+                  <div class="flex items-center justify-between text-[11px] font-bold text-slate-600 mb-1">
+                    <span>📝 הערת סטטוס מתחלפת (מעודכנת ע"י הרכז):</span>
+                    <button onclick="openEditActivistModal(${act.id})" class="text-amber-600 hover:underline font-bold text-xs flex items-center gap-1">
+                      <span>ערוך את כל פרטי הפעיל</span>
+                      <span>✏️</span>
+                    </button>
+                  </div>
+                  <p class="text-slate-800 text-xs font-normal leading-relaxed">${act.notes || 'אין הערות כרגע'}</p>
+                </div>
+
+              </div>
+            ` : ''}
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Modal: Full Edit for Activist
+    function openEditActivistModal(actId) {
+      const act = activistsData.find(a => a.id === actId);
+      if (!act) return;
+
+      document.getElementById('edit-act-id').value = act.id;
+      document.getElementById('edit-act-name').value = act.name;
+      document.getElementById('edit-act-category').value = act.category;
+      document.getElementById('edit-act-phone').value = act.phone;
+      document.getElementById('edit-act-email').value = act.email || '';
+      document.getElementById('edit-act-sms').value = act.smsVerified ? 'true' : 'false';
+      document.getElementById('edit-act-status').value = act.status;
+      document.getElementById('edit-act-preferred-stand').value = act.preferredStand || '';
+      document.getElementById('edit-act-notes').value = act.notes || '';
+      document.getElementById('modal-edit-act-subtitle').innerText = `עריכת פרטי פעיל: ${act.name}`;
+
+      document.getElementById('modal-edit-activist').classList.remove('hidden');
+    }
+
+    function closeEditActivistModal() {
+      document.getElementById('modal-edit-activist').classList.add('hidden');
+    }
+
+    function saveActivistFullEdit() {
+      const id = parseInt(document.getElementById('edit-act-id').value);
+      const act = activistsData.find(a => a.id === id);
+      if (!act) return;
+
+      act.name = document.getElementById('edit-act-name').value.trim();
+      act.category = document.getElementById('edit-act-category').value;
+      act.phone = document.getElementById('edit-act-phone').value.trim();
+      act.email = document.getElementById('edit-act-email').value.trim();
+      act.smsVerified = document.getElementById('edit-act-sms').value === 'true';
+      act.status = document.getElementById('edit-act-status').value;
+      act.preferredStand = document.getElementById('edit-act-preferred-stand').value;
+      act.notes = document.getElementById('edit-act-notes').value.trim();
+
+      closeEditActivistModal();
+      renderActivistsAccordion();
+      renderStandsRoster();
+      updateMapMarkers();
+      syncStateToServer();
+      alert(`פרטי הפעיל ${act.name} עודכנו בהצלחה במאגר!`);
+    }
+
+    function deleteActivistFromModal() {
+      const id = parseInt(document.getElementById('edit-act-id').value);
+      const act = activistsData.find(a => a.id === id);
+      if (!act) return;
+
+      if (confirm(`האם אתה בטוח שברצונך למחוק את ${act.name} ממאגר הפעילים?`)) {
+        activistsData = activistsData.filter(a => a.id !== id);
+        closeEditActivistModal();
+        renderActivistsAccordion();
+        renderStandsRoster();
+        updateMapMarkers();
+        syncStateToServer();
+      }
+    }
+
+    function openAddActivistModal() {
+      document.getElementById('modal-activist').classList.remove('hidden');
+    }
+    function closeAddActivistModal() {
+      document.getElementById('modal-activist').classList.add('hidden');
+    }
+
+    function saveNewActivist() {
+      const name = document.getElementById('modal-act-name').value.trim();
+      const phone = document.getElementById('modal-act-phone').value.trim();
+      const email = document.getElementById('modal-act-email').value.trim();
+      const category = document.getElementById('modal-act-category').value;
+      const status = document.getElementById('modal-act-status').value;
+      const notes = document.getElementById('modal-act-notes').value.trim();
+
+      if (!name || !phone) {
+        alert('אנא הזן לפחות שם מלא ומספר טלפון!');
+        return;
+      }
+
+      const newAct = {
+        id: Date.now(),
+        name,
+        phone,
+        email,
+        category,
+        status,
+        smsVerified: false,
+        preferredStand: '',
+        notes
+      };
+
+      activistsData.unshift(newAct);
+      openAccordionIds.add(newAct.id);
+      closeAddActivistModal();
+      document.getElementById('modal-act-name').value = '';
+      document.getElementById('modal-act-phone').value = '';
+      document.getElementById('modal-act-notes').value = '';
+      setActivistCategory(category);
+      syncStateToServer();
+      alert(`הפעיל ${name} נוסף בהצלחה למאגר!`);
+    }
+
+
+    // --- 4. PAGE 2: MAP MODULE (WITH DIRECT LINK TO STAND ROSTER) ---
+    function initMapIfNeeded() {
+      if (leafletMapInstance) {
+        leafletMapInstance.invalidateSize();
+        return;
+      }
+
+      leafletMapInstance = L.map('leaflet-map').setView([31.7815, 35.2175], 14);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(leafletMapInstance);
+
+      updateMapMarkers();
+    }
+
+    function updateMapMarkers() {
+      if (!leafletMapInstance) return;
+
+      mapMarkers.forEach(m => leafletMapInstance.removeLayer(m));
+      mapMarkers = [];
+
+      const currentRoster = getCurrentWeekRoster();
+      let listHtml = '';
+
+      standsData.forEach(stand => {
+        if (currentMapFilter !== 'all' && stand.type !== currentMapFilter) return;
+
+        const sData = currentRoster[stand.id] || { leadId: null, assignedIds: [], note: '' };
+        const assigned = activistsData.filter(a => sData.assignedIds.includes(a.id));
+        const lead = activistsData.find(a => a.id === sData.leadId);
+
+        // Status color calculation
+        const statusColor = assigned.length >= stand.requiredActivists && lead ? '#10b981' : assigned.length > 0 ? '#f59e0b' : '#ef4444';
+
+        const customIcon = L.divIcon({
+          className: 'custom-map-pin',
+          html: `
+            <div style="background-color: ${statusColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;">
+              ${stand.type === 'stand' ? '📍' : '📖'}
+            </div>
+          `,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        const marker = L.marker(stand.coords, { icon: customIcon }).addTo(leafletMapInstance);
+        
+        marker.bindPopup(`
+          <div dir="rtl" style="font-family: 'Rubik', sans-serif; min-width: 220px;">
+            <div style="font-weight: bold; font-size: 14px; color: #0f172a; margin-bottom: 2px;">${stand.name}</div>
+            <div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">${stand.address} • ${stand.hours}</div>
+            <div style="font-size: 11px; margin-bottom: 4px;">
+              <strong>מפקד עמדה:</strong> ${lead ? lead.name : '<span style="color:#ef4444">טרם מונה</span>'}
+            </div>
+            <div style="font-size: 11px; margin-bottom: 6px;">
+              <strong>פעילים משובצים (${assigned.length}/${stand.requiredActivists}):</strong><br>
+              ${assigned.map(a => `• ${a.name}`).join('<br>') || 'אין עדיין משובצים'}
+            </div>
+            <div style="font-size: 10px; background: #f8fafc; padding: 4px 6px; border-radius: 6px; border: 1px solid #e2e8f0; color: #334155; margin-bottom: 8px;">
+              <strong>סטטוס השבוע:</strong> ${sData.note || 'שגרה'}
+            </div>
+
+            <!-- DIRECT JUMP TO STAND ROSTER IN PAGE 3 -->
+            <button onclick="jumpToStandRoster('${stand.id}')" style="width: 100%; background: #0f172a; color: white; font-weight: bold; font-size: 11px; padding: 6px; border-radius: 8px; border: none; cursor: pointer; text-align: center;">
+              📋 עבור לשיבוץ עמדה זו בדף 3 ➔
+            </button>
+          </div>
+        `);
+
+        mapMarkers.push(marker);
+
+        // Append to side list with jump button
+        listHtml += `
+          <div class="p-2.5 rounded-xl border border-slate-200/70 hover:border-amber-400 hover:bg-slate-50 transition text-xs space-y-1.5">
+            <div onclick="focusStandOnMap(${stand.coords[0]}, ${stand.coords[1]})" class="cursor-pointer">
+              <div class="flex items-center justify-between font-bold text-slate-800">
+                <span class="flex items-center gap-1.5">
+                  <span>${stand.type === 'stand' ? '🟡' : '🔵'}</span>
+                  <span>${stand.name}</span>
+                </span>
+                <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${statusColor}"></span>
+              </div>
+              <div class="text-[11px] text-slate-500">${stand.address}</div>
+              <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                <span>משובצים: ${assigned.length}/${stand.requiredActivists}</span>
+                <span>${lead ? 'מפקד: ' + lead.name : 'ללא מפקד'}</span>
+              </div>
+            </div>
+
+            <button onclick="jumpToStandRoster('${stand.id}')" class="w-full bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 font-bold text-[10px] py-1 rounded-md transition text-center">
+              עבור לשיבוץ עמדה זו בדף 3 ➔
+            </button>
+          </div>
+        `;
+      });
+
+      document.getElementById('map-stand-list').innerHTML = listHtml;
+    }
+
+    function focusStandOnMap(lat, lng) {
+      if (leafletMapInstance) {
+        leafletMapInstance.setView([lat, lng], 16, { animate: true });
+      }
+    }
+
+    function jumpToStandRoster(standId) {
+      switchPage('stands');
+      setTimeout(() => {
+        const standCard = document.getElementById(`stand-card-${standId}`);
+        if (standCard) {
+          standCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          standCard.classList.add('highlight-stand');
+          setTimeout(() => standCard.classList.remove('highlight-stand'), 2200);
+        }
+      }, 150);
+    }
+
+    function filterMapMarkers(type) {
+      currentMapFilter = type;
+      document.querySelectorAll('.map-filter-btn').forEach(b => {
+        b.classList.remove('bg-slate-900', 'text-white');
+        b.classList.add('bg-slate-100', 'text-slate-700');
+      });
+      event.target.classList.add('bg-slate-900', 'text-white');
+      updateMapMarkers();
+    }
+
+    function openAddStandModal() {
+      const name = prompt('הזן שם עמדה חדשה (למשל: שער יפו):');
+      if (!name) return;
+      const address = prompt('הזן כתובת / מיקום:', 'ירושלים');
+      
+      const newStand = {
+        id: 'stand-' + Date.now(),
+        name,
+        type: 'stand',
+        city: 'ירושלים',
+        address: address || 'ירושלים',
+        coords: [31.7765 + (Math.random() - 0.5) * 0.01, 35.2285 + (Math.random() - 0.5) * 0.01],
+        hours: '23:00 - 02:30',
+        requiredActivists: 2
+      };
+
+      standsData.push(newStand);
+      updateMapMarkers();
+      renderStandsRoster();
+      syncStateToServer();
+      alert(`העמדה ${name} נוספה בהצלחה למפה ולשיבוצים!`);
+    }
+
+
+    // --- 5. PAGE 3: STANDS ROSTER & WEEKS TIME MACHINE ---
+    function initWeeksNavigator() {
+      const select = document.getElementById('select-week-navigator');
+      select.innerHTML = weeksList.map((w, idx) => `
+        <option value="${idx}" ${idx === currentWeekIndex ? 'selected' : ''}>
+          📜 ${w.parasha} • ${w.date} (${w.label})
+        </option>
+      `).join('');
+
+      updateWeekDisplay();
+    }
+
+    function navigateWeek(delta) {
+      const newIdx = currentWeekIndex + delta;
+      if (newIdx >= 0 && newIdx < weeksList.length) {
+        currentWeekIndex = newIdx;
+        document.getElementById('select-week-navigator').value = currentWeekIndex;
+        updateWeekDisplay();
+      }
+    }
+
+    function onWeekDropdownChanged() {
+      currentWeekIndex = parseInt(document.getElementById('select-week-navigator').value);
+      updateWeekDisplay();
+    }
+
+    function updateWeekDisplay() {
+      const currentWeek = weeksList[currentWeekIndex];
+      // Display Torah Portion in top header pill
+      document.getElementById('header-week-pill').innerText = currentWeek.parasha;
+      
+      const badge = document.getElementById('current-week-status-badge');
+      if (currentWeekIndex === 8) {
+        badge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-3 py-1 rounded-full text-xs';
+        badge.innerText = `📜 ${currentWeek.parasha} • שבוע נוכחי (פעילות סגורה)`;
+      } else if (currentWeekIndex < 8) {
+        badge.className = 'bg-slate-700 text-slate-300 font-bold px-3 py-1 rounded-full text-xs';
+        badge.innerText = `📜 ${currentWeek.parasha} • ארכיון עבר (${currentWeek.label})`;
+      } else {
+        badge.className = 'bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold px-3 py-1 rounded-full text-xs';
+        badge.innerText = `📜 ${currentWeek.parasha} • תכנון עתידי (${currentWeek.label})`;
+      }
+
+      renderStandsRoster();
+      renderActivistsAccordion();
+      updateMapMarkers();
+    }
+
+    function getCurrentWeekRoster() {
+      const weekId = weeksList[currentWeekIndex].id;
+      if (!weeklyRosters[weekId]) {
+        // Initialize empty roster for this week
+        weeklyRosters[weekId] = {};
+        standsData.forEach(stand => {
+          weeklyRosters[weekId][stand.id] = { leadId: null, assignedIds: [], note: 'ממתין לשיבוץ' };
+        });
+      }
+      return weeklyRosters[weekId];
+    }
+
+    // Smart Clone Feature: Clone previous week's roster as default
+    function clonePreviousWeekRoster() {
+      if (currentWeekIndex === 0) {
+        alert('אין שבוע קודם להעתקה.');
+        return;
+      }
+
+      const prevWeek = weeksList[currentWeekIndex - 1];
+      const prevRoster = weeklyRosters[prevWeek.id];
+
+      if (!prevRoster || Object.keys(prevRoster).length === 0) {
+        alert(`בשבוע הקודם (${prevWeek.name}) אין שיבוצים שמורים להעתקה.`);
+        return;
+      }
+
+      const currentWeek = weeksList[currentWeekIndex];
+      if (confirm(`האם להעמיד את נציגי ומפקדי השבוע הקודם (${prevWeek.name}) כברירת מחדל לשבוע זה (${currentWeek.name})?`)) {
+        const currentRoster = getCurrentWeekRoster();
+        for (const [standId, data] of Object.entries(prevRoster)) {
+          currentRoster[standId] = {
+            leadId: data.leadId,
+            assignedIds: [...data.assignedIds],
+            note: 'הועתק כברירת מחדל משבוע שעבר'
+          };
+        }
+        renderStandsRoster();
+        renderActivistsAccordion();
+        updateMapMarkers();
+        syncStateToServer();
+        alert(`השיבוץ מ-${prevWeek.name} שוכפל בהצלחה לשבוע ${currentWeek.name}!`);
+      }
+    }
+
+    function renderStandsRoster() {
+      const grid = document.getElementById('stands-roster-grid');
+      const standsBadge = document.getElementById('badge-stands-count');
+      if (standsBadge) standsBadge.innerText = `${standsData.length} עמדות`;
+
+      if (standsData.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full bg-white p-10 rounded-2xl border border-slate-200 text-center space-y-3">
+            <div class="text-3xl">📍</div>
+            <h3 class="font-bold text-sm text-slate-800">טרם הוגדרו עמדות במערכת</h3>
+            <p class="text-xs text-slate-500">ניתן להוסיף עמדות חדשות בלחיצה על הכפתור למטה או דרך דף המפה</p>
+            <button onclick="openAddStandModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-xs">+ הוספת עמדה ראשונה</button>
+          </div>
+        `;
+        return;
+      }
+
+      const currentRoster = getCurrentWeekRoster();
+
+      grid.innerHTML = standsData.map(stand => {
+        const sData = currentRoster[stand.id] || { leadId: null, assignedIds: [], note: '' };
+        const assigned = activistsData.filter(a => sData.assignedIds.includes(a.id));
+        const lead = activistsData.find(a => a.id === sData.leadId);
+
+        return `
+          <div id="stand-card-${stand.id}" class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between space-y-4">
+            
+            <!-- Stand Header -->
+            <div>
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-sm">${stand.type === 'stand' ? '🟡' : '🔵'}</span>
+                    <h3 class="font-bold text-base text-slate-900">${stand.name}</h3>
+                  </div>
+                  <div class="text-xs text-slate-400">${stand.address} • ${stand.hours}</div>
+                </div>
+
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  assigned.length >= stand.requiredActivists && lead ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                  assigned.length > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                  'bg-red-50 text-red-700 border border-red-200'
+                }">
+                  ${assigned.length >= stand.requiredActivists ? 'מאויש מלא ✓' : `חסר ${stand.requiredActivists - assigned.length} פעילים`}
+                </span>
+              </div>
+
+              <!-- Lead Activist Box -->
+              <div class="mt-3 bg-amber-50/60 border border-amber-200/70 rounded-xl p-2.5 text-xs">
+                <div class="flex items-center justify-between text-amber-900 font-bold mb-1">
+                  <span>⭐ מפקד עמדה ואחראי קשר:</span>
+                  ${lead ? `<span class="text-slate-500 font-mono text-[10px]" dir="ltr">${lead.phone}</span>` : ''}
+                </div>
+                <div class="font-semibold text-slate-800">
+                  ${lead ? lead.name : '<span class="text-red-600 font-normal">טרם מונה מפקד לעמדה זו</span>'}
+                </div>
+              </div>
+
+              <!-- Assigned Activists List -->
+              <div class="mt-3 space-y-1.5">
+                <div class="text-[11px] font-bold text-slate-600 flex items-center justify-between">
+                  <span>פעילים משובצים לשבוע זה (${assigned.length}):</span>
+                  <button onclick="openAssignModal('${stand.id}', '${stand.name}')" class="text-blue-600 hover:underline font-bold">+ שבץ פעיל</button>
+                </div>
+
+                ${assigned.map(a => `
+                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium text-slate-800">${a.name}</span>
+                      ${sData.leadId === a.id ? '<span class="text-[9px] bg-amber-200 text-amber-900 font-bold px-1 rounded">מפקד</span>' : ''}
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button onclick="toggleStandLeadInWeek('${stand.id}', ${a.id})" class="text-[10px] text-amber-700 hover:underline font-semibold" title="הגדר/בטל כמפקד עמדה">
+                        ${sData.leadId === a.id ? 'בטל פיקוד' : 'הפוך למפקד'}
+                      </button>
+                      <button onclick="unassignActivistInWeek('${stand.id}', ${a.id})" class="text-red-500 hover:text-red-700 font-bold text-xs" title="הסר מעמדה">✕</button>
+                    </div>
+                  </div>
+                `).join('') || '<div class="text-xs text-slate-400 italic p-2 bg-slate-50 rounded-lg">אין פעילים משובצים לעמדה זו בשבוע הנבחר</div>'}
+              </div>
+
+              <!-- Live Evening Status Note -->
+              <div class="mt-3.5 bg-slate-50 rounded-xl p-2.5 border border-slate-200/60 text-xs">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                  <span class="font-bold text-slate-600">הערת סטטוס שבועית (הרכז מעדכן בלייב):</span>
+                  <button onclick="editStandStatusInWeek('${stand.id}')" class="text-amber-600 hover:underline font-semibold">עדכן ✏️</button>
+                </div>
+                <p class="text-slate-700 font-normal leading-relaxed">${sData.note || 'אין הערות כרגע'}</p>
+              </div>
+
+            </div>
+
+            <!-- Stand Footer & Reflection Trigger -->
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <button onclick="openReflectionForStand('${stand.name}', '${assigned.map(a => a.name).join(', ')}')" class="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 w-full justify-center">
+                <span>📝</span>
+                <span>הזנת רפלקציה / סיכום משמרת</span>
+              </button>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openAssignModal(standId, standName) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+
+      // Available activists: those not yet in this stand
+      const available = activistsData.filter(a => !sData.assignedIds.includes(a.id));
+      if (available.length === 0) {
+        alert('כל הפעילים במאגר כבר משובצים לעמדה זו!');
+        return;
+      }
+
+      const options = available.map((a, i) => `${i + 1}. ${a.name} (${a.phone})`).join('\n');
+      const pick = prompt(`בחר פעיל לשיבוץ בעמדת ${standName}:\n\n${options}\n\nהזן את מספר הפעיל:`);
+      const idx = parseInt(pick) - 1;
+      if (!isNaN(idx) && available[idx]) {
+        sData.assignedIds.push(available[idx].id);
+        if (!sData.leadId) {
+          sData.leadId = available[idx].id; // Make lead if none
+        }
+        renderStandsRoster();
+        renderActivistsAccordion();
+        updateMapMarkers();
+        syncStateToServer();
+      }
+    }
+
+    function toggleStandLeadInWeek(standId, actId) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      if (sData.leadId === actId) {
+        sData.leadId = null;
+      } else {
+        sData.leadId = actId;
+      }
+      renderStandsRoster();
+      renderActivistsAccordion();
+      updateMapMarkers();
+      syncStateToServer();
+    }
+
+    function unassignActivistInWeek(standId, actId) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      sData.assignedIds = sData.assignedIds.filter(id => id !== actId);
+      if (sData.leadId === actId) {
+        sData.leadId = sData.assignedIds[0] || null;
+      }
+      renderStandsRoster();
+      renderActivistsAccordion();
+      updateMapMarkers();
+      syncStateToServer();
+    }
+
+    function editStandStatusInWeek(standId) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      const stand = standsData.find(s => s.id === standId);
+      const note = prompt(`עדכון הערת סטטוס חיה עבור ${stand.name} לשבוע ${weeksList[currentWeekIndex].name}:`, sData.note);
+      if (note !== null) {
+        sData.note = note.trim();
+        renderStandsRoster();
+        updateMapMarkers();
+        syncStateToServer();
+      }
+    }
+
+    function copyWeeklyRosterForWhatsapp() {
+      const currentWeek = weeksList[currentWeekIndex];
+      const currentRoster = getCurrentWeekRoster();
+      let lines = [`*🕯️ שיבוץ עמדות "השיבנו דוכנים" — ${currentWeek.parasha} (${currentWeek.date})*\n`];
+
+      standsData.forEach(stand => {
+        const sData = currentRoster[stand.id] || { leadId: null, assignedIds: [], note: '' };
+        const lead = activistsData.find(a => a.id === sData.leadId);
+        const assigned = sData.assignedIds.map(id => activistsData.find(a => a.id === id)).filter(Boolean);
+        lines.push(`📍 *${stand.name}* (${stand.hours}):`);
+        lines.push(`   ⭐ מפקד עמדה: ${lead ? lead.name + ' (' + lead.phone + ')' : 'טרם שובץ'}`);
+        lines.push(`   👥 צוות: ${assigned.length > 0 ? assigned.map(a => a.name).join(', ') : 'ללא שיבוץ'}`);
+        if (sData.note) lines.push(`   📝 דגשים: ${sData.note}`);
+        lines.push('');
+      });
+
+      const finalMsg = lines.join('\n');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(finalMsg).then(() => {
+          alert(`📋 שיבוץ ${currentWeek.parasha} הועתק ללוח בהצלחה!\nכעת תוכל להדביק אותו ישירות בקבוצת הוואטסאפ של הרכזים והפעילים.`);
+        });
+      } else {
+        prompt('העתק את הודעת השיבוץ לוואטסאפ:', finalMsg);
+      }
+    }
+
+
+    // --- 6. PAGE 4: REFLECTIONS & AI INSIGHTS ---
+    function setReflectionTagFilter(tag) {
+      currentRefTagFilter = tag;
+      document.querySelectorAll('.ref-tag-btn').forEach(b => {
+        b.classList.remove('bg-slate-900', 'text-white');
+        b.classList.add('bg-white', 'text-slate-700');
+      });
+      event.target.classList.add('bg-slate-900', 'text-white');
+      renderReflections();
+    }
+
+    function renderReflections() {
+      const feed = document.getElementById('reflections-feed');
+      const standFilter = document.getElementById('reflection-filter-stand').value;
+      const actFilter = document.getElementById('reflection-filter-activist').value;
+
+      let filtered = [...reflectionsData];
+
+      if (standFilter !== 'all') {
+        filtered = filtered.filter(r => r.stand === standFilter);
+      }
+      if (actFilter !== 'all') {
+        filtered = filtered.filter(r => r.activists.includes(actFilter));
+      }
+      if (currentRefTagFilter !== 'all') {
+        filtered = filtered.filter(r => r.aiTags.includes(currentRefTagFilter));
+      }
+
+      if (filtered.length === 0) {
+        feed.innerHTML = `
+          <div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs space-y-2">
+            <div class="text-2xl">🔍</div>
+            <p>לא נמצאו רפלקציות התואמות את החיתוך שנבחר.</p>
+          </div>
+        `;
+        return;
+      }
+
+      feed.innerHTML = filtered.map(ref => `
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md transition space-y-3.5">
+          
+          <!-- Reflection Header -->
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-black text-slate-900">${ref.stand}</span>
+                <span class="text-xs bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-md">${ref.date}</span>
+              </div>
+              <div class="text-xs text-slate-500 mt-0.5">פעילים במשמרת: <strong class="text-slate-800">${ref.activists}</strong></div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="flex items-center gap-3 text-xs">
+              <div class="bg-purple-50 text-purple-900 border border-purple-200/70 px-2.5 py-1 rounded-lg font-bold">
+                👥 נוער: ${ref.youthCount}
+              </div>
+              <div class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg">
+                טווח גיל: ${ref.ageRange}
+              </div>
+              <div class="bg-slate-100 text-slate-700 font-mono text-[11px] px-2.5 py-1 rounded-lg" dir="ltr">
+                ${ref.hours}
+              </div>
+            </div>
+          </div>
+
+          <!-- Atmosphere & Street Vibe -->
+          <div class="text-xs leading-relaxed">
+            <span class="font-bold text-slate-700">תמונת הגזרה והאווירה:</span>
+            <p class="text-slate-600 mt-0.5">${ref.atmosphere}</p>
+          </div>
+
+          <!-- Highlight Story -->
+          <div class="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 text-xs leading-relaxed">
+            <div class="font-bold text-amber-950 flex items-center gap-1.5 mb-1">
+              <span>🌟 סיפור מיוחד / שיחת עומק מהלילה:</span>
+            </div>
+            <p class="text-amber-900 font-normal">${ref.story}</p>
+          </div>
+
+          <!-- Youth Leads for Follow-up -->
+          ${ref.leads ? `
+            <div class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 text-xs leading-relaxed">
+              <div class="font-bold text-blue-950 flex items-center gap-1.5 mb-1">
+                <span>🎯 נוער שפגשנו ודורש המשך קשר / ליווי:</span>
+              </div>
+              <p class="text-blue-900 font-normal font-mono text-[11px]" dir="rtl">${ref.leads}</p>
+            </div>
+          ` : ''}
+
+          <!-- AI Learning Tags -->
+          <div class="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="text-[10px] text-purple-700 font-bold">תגיות AI:</span>
+              ${ref.aiTags.map(tag => `
+                <span class="text-[10px] bg-purple-50 text-purple-800 border border-purple-200/70 font-semibold px-2 py-0.5 rounded-full">
+                  🏷️ ${tag}
+                </span>
+              `).join('')}
+            </div>
+
+            <div class="text-[11px] text-slate-400">
+              תועד ע"י הרכז במערכת השיבנו דוכנים
+            </div>
+          </div>
+
+        </div>
+      `).join('');
+    }
+
+    function openNewReflectionModal() {
+      document.getElementById('modal-reflection').classList.remove('hidden');
+    }
+    function closeNewReflectionModal() {
+      document.getElementById('modal-reflection').classList.add('hidden');
+    }
+
+    function openReflectionForStand(standName, activistsStr) {
+      document.getElementById('modal-ref-stand').value = standName;
+      document.getElementById('modal-ref-activists').value = activistsStr || '';
+      openNewReflectionModal();
+    }
+
+    function saveNewReflection() {
+      const stand = document.getElementById('modal-ref-stand').value;
+      const activists = document.getElementById('modal-ref-activists').value.trim();
+      const youthCount = parseInt(document.getElementById('modal-ref-youth-count').value) || 0;
+      const ageRange = document.getElementById('modal-ref-age-range').value.trim();
+      const hours = document.getElementById('modal-ref-hours').value.trim();
+      const atmosphere = document.getElementById('modal-ref-atmosphere').value.trim();
+      const story = document.getElementById('modal-ref-story').value.trim();
+      const leads = document.getElementById('modal-ref-leads').value.trim();
+
+      const checkedTags = [];
+      document.querySelectorAll('input[name="ref-ai-tag"]:checked').forEach(cb => checkedTags.push(cb.value));
+
+      if (!activists || !story) {
+        alert('אנא הזן לפחות את שמות הפעילים וסיפור/תובנה מהמשמרת!');
+        return;
+      }
+
+      const newRef = {
+        id: Date.now(),
+        stand,
+        date: weeksList[currentWeekIndex].name,
+        activists,
+        youthCount,
+        ageRange,
+        hours,
+        atmosphere,
+        story,
+        leads,
+        aiTags: checkedTags.length > 0 ? checkedTags : ['התעניינות ביהדות / חזרה בתשובה', 'שאלות באמונה והשקפה']
+      };
+
+      reflectionsData.unshift(newRef);
+
+      // Auto-sync Leads from Reflection into Page 5 Leads Store
+      if (leads && leads.trim()) {
+        const autoLead = {
+          id: Date.now() + 1,
+          name: leads.split(' ')[0] + ' ' + (leads.split(' ')[1] || ''),
+          phone: leads.match(/05\d-?\d{7}/) ? leads.match(/05\d-?\d{7}/)[0] : 'ללא טלפון',
+          stand: stand,
+          week: weeksList[currentWeekIndex].parasha,
+          interest: checkedTags[0] || 'התעניינות ביהדות / חזרה בתשובה',
+          interestTags: checkedTags.length > 0 ? checkedTags.slice(0, 3) : ['התעניינות ביהדות / חזרה בתשובה'],
+          status: 'ממתין ליצירת קשר',
+          assignedActivist: activists.split(',')[0] || '',
+          notes: `נוסף אוטומטית מרפלקציית משמרת ${stand}: "${leads}"`
+        };
+        leadsData.unshift(autoLead);
+      }
+
+      closeNewReflectionModal();
+      switchPage('reflections');
+      renderReflections();
+      renderLeads();
+      syncStateToServer();
+      alert('הרפלקציה נקלטה בהצלחה במאגר, והמתעניינים הועברו ישירות לדף 5 (מאגר מתעניינים)!');
+    }
+
+    function generateAILearningReport() {
+      alert(`✨ מנוע ה-AI של השיבנו דוכנים הפיק דוח תובנות שבועי:\n\n• סה"כ נוער שפגשנו ועצר בדוכנים: 108 צעירים\n• הנחות תפילין וקבלת ציצית בעמדות: 34 נערים\n• בקשות להשתלבות בשיעורי תורה וחברותות: 12 פניות חדשות\n• התעניינות באירוח שבת קרובה: 7 צעירים\n• מוקד הפעילות המוביל בשאלות אמונה והשקפה: כיכר ציון ומרכז השיעורים נחלאות.`);
+    }
+
+
+    // --- 7. PAGE 5: LEADS & REPENTANCE FOLLOW-UP MODULE ---
+    function renderLeads() {
+      const container = document.getElementById('leads-container');
+      const filterStatus = document.getElementById('lead-filter-status').value;
+      const filterInterest = document.getElementById('lead-filter-interest').value;
+      const search = document.getElementById('lead-search-input').value.trim().toLowerCase();
+
+      let filtered = [...leadsData];
+
+      if (filterStatus !== 'all') {
+        filtered = filtered.filter(l => l.status === filterStatus);
+      }
+      if (filterInterest !== 'all') {
+        filtered = filtered.filter(l => l.interest === filterInterest || (l.interestTags && l.interestTags.includes(filterInterest)));
+      }
+      if (search) {
+        filtered = filtered.filter(l => 
+          l.name.toLowerCase().includes(search) || 
+          l.phone.includes(search) || 
+          (l.notes && l.notes.toLowerCase().includes(search)) ||
+          (l.stand && l.stand.toLowerCase().includes(search))
+        );
+      }
+
+      document.getElementById('badge-leads-count').innerText = leadsData.length;
+      document.getElementById('leads-total-badge').innerText = `${leadsData.length} מתעניינים`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs space-y-2">
+            <div class="text-3xl">🔍</div>
+            <p class="font-bold text-slate-600">לא נמצאו מתעניינים התואמים את הסינון</p>
+            <p class="text-[11px]">נסה לשנות את הסינון או להוסיף מתעניין חדש בלחיצה על הכפתור למעלה</p>
+          </div>
+        `;
+        return;
+      }
+
+      const statusColors = {
+        'ממתין ליצירת קשר': 'bg-amber-50 text-amber-700 border-amber-200',
+        'בוצעה שיחה ראשונית': 'bg-blue-50 text-blue-700 border-blue-200',
+        'שובץ לחברותא': 'bg-purple-50 text-purple-700 border-purple-200',
+        'הוזמן לאירוח שבת': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        'בליווי תורני שוטף': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        'נקלט בשיעור קבוע': 'bg-teal-50 text-teal-700 border-teal-200'
+      };
+
+      container.innerHTML = filtered.map(lead => {
+        const colorClass = statusColors[lead.status] || 'bg-slate-50 text-slate-700 border-slate-200';
+        const cleanPhone = lead.phone.replace(/[^0-9]/g, '');
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs hover:shadow-md transition space-y-3 flex flex-col justify-between">
+            
+            <!-- Top Header: Name, Stand & Week -->
+            <div>
+              <div class="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-sm text-slate-900">${lead.name}</h3>
+                    <button onclick="editLead(${lead.id})" class="text-slate-400 hover:text-slate-600 text-xs" title="ערוך פרטים מלאים">✏️</button>
+                  </div>
+                  <div class="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                    <span>📍 ${lead.stand}</span>
+                    <span>•</span>
+                    <span class="font-semibold text-slate-600">${lead.week || 'מפגש שטח'}</span>
+                  </div>
+                </div>
+
+                <!-- Direct Call & WhatsApp Buttons -->
+                <div class="flex items-center gap-1.5" dir="ltr">
+                  <a href="tel:${lead.phone}" class="w-7 h-7 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center justify-center text-xs hover:bg-emerald-100 transition" title="חייג ${lead.phone}">
+                    📞
+                  </a>
+                  <a href="https://wa.me/972${cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone}" target="_blank" class="w-7 h-7 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center justify-center text-xs hover:bg-emerald-100 transition" title="וואטסאפ">
+                    💬
+                  </a>
+                </div>
+              </div>
+
+              <!-- Quick Status Selector (Single Click Change) -->
+              <div class="mt-2.5">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                  <span>סטטוס ליווי (עדכון מהיר):</span>
+                  <span class="font-mono text-slate-500" dir="ltr">${lead.phone}</span>
+                </div>
+                <select onchange="quickUpdateLeadStatus(${lead.id}, this.value)" class="w-full text-xs font-bold p-1.5 rounded-lg border outline-none ${colorClass} cursor-pointer transition">
+                  <option value="ממתין ליצירת קשר" ${lead.status === 'ממתין ליצירת קשר' ? 'selected' : ''}>⏳ ממתין ליצירת קשר</option>
+                  <option value="בוצעה שיחה ראשונית" ${lead.status === 'בוצעה שיחה ראשונית' ? 'selected' : ''}>📞 בוצעה שיחה ראשונית</option>
+                  <option value="שובץ לחברותא" ${lead.status === 'שובץ לחברותא' ? 'selected' : ''}>📖 שובץ לחברותא</option>
+                  <option value="הוזמן לאירוח שבת" ${lead.status === 'הוזמן לאירוח שבת' ? 'selected' : ''}>🕯️ הוזמן לאירוח שבת</option>
+                  <option value="בליווי תורני שוטף" ${lead.status === 'בליווי תורני שוטף' ? 'selected' : ''}>🤝 בליווי תורני שוטף</option>
+                  <option value="נקלט בשיעור קבוע" ${lead.status === 'נקלט בשיעור קבוע' ? 'selected' : ''}>✅ נקלט בשיעור קבוע</option>
+                </select>
+              </div>
+
+              <!-- Repentance & Faith Tags -->
+              <div class="mt-2.5">
+                <div class="text-[10px] text-slate-400 mb-1 font-bold">מה רצה בהקשר לתשובה ויהדות:</div>
+                <div class="flex flex-wrap gap-1">
+                  ${(lead.interestTags || [lead.interest]).map(tag => `
+                    <span class="text-[10px] bg-rose-50 text-rose-800 border border-rose-200/80 font-bold px-2 py-0.5 rounded-md">
+                      ✨ ${tag}
+                    </span>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- Notes & Background -->
+              ${lead.notes ? `
+                <div class="mt-2.5 bg-slate-50 p-2 rounded-lg border border-slate-100 text-[11px] text-slate-600 leading-relaxed">
+                  ${lead.notes}
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Card Footer: Assigned Activist Mentor -->
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+              <span class="text-slate-400">פעיל מלווה:</span>
+              <strong class="text-slate-700">${lead.assignedActivist || 'טרם שובץ מלווה'}</strong>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    function quickUpdateLeadStatus(leadId, newStatus) {
+      const lead = leadsData.find(l => l.id === leadId);
+      if (lead) {
+        lead.status = newStatus;
+        renderLeads();
+        syncStateToServer();
+      }
+    }
+
+    function openAddLeadModal() {
+      document.getElementById('modal-lead-title').innerHTML = '<span>🌱 הוספת מתעניין חדש לליווי</span>';
+      document.getElementById('lead-edit-id').value = '';
+      document.getElementById('lead-name').value = '';
+      document.getElementById('lead-phone').value = '';
+      document.getElementById('lead-notes').value = '';
+      document.getElementById('btn-delete-lead').classList.add('hidden');
+      
+      populateLeadActivistsSelect();
+      document.querySelectorAll('input[name="lead-tag"]').forEach(cb => cb.checked = false);
+
+      document.getElementById('modal-lead').classList.remove('hidden');
+    }
+
+    function editLead(leadId) {
+      const lead = leadsData.find(l => l.id === leadId);
+      if (!lead) return;
+
+      document.getElementById('modal-lead-title').innerHTML = '<span>✏️ עריכת כרטיס מתעניין</span>';
+      document.getElementById('lead-edit-id').value = lead.id;
+      document.getElementById('lead-name').value = lead.name;
+      document.getElementById('lead-phone').value = lead.phone;
+      document.getElementById('lead-stand').value = lead.stand;
+      document.getElementById('lead-status').value = lead.status;
+      document.getElementById('lead-notes').value = lead.notes || '';
+      document.getElementById('btn-delete-lead').classList.remove('hidden');
+
+      populateLeadActivistsSelect(lead.assignedActivist);
+
+      const tags = lead.interestTags || [lead.interest];
+      document.querySelectorAll('input[name="lead-tag"]').forEach(cb => {
+        cb.checked = tags.includes(cb.value);
+      });
+
+      document.getElementById('modal-lead').classList.remove('hidden');
+    }
+
+    function closeLeadModal() {
+      document.getElementById('modal-lead').classList.add('hidden');
+    }
+
+    function populateLeadActivistsSelect(selectedName) {
+      const select = document.getElementById('lead-assigned-activist');
+      select.innerHTML = '<option value="">ללא פעיל מלווה כרגע</option>' + 
+        activistsData.map(a => `
+          <option value="${a.name}" ${a.name === selectedName ? 'selected' : ''}>
+            ${a.name} (${a.preferredStand || 'כללי'})
+          </option>
+        `).join('');
+    }
+
+    function saveLeadModal() {
+      const idVal = document.getElementById('lead-edit-id').value;
+      const name = document.getElementById('lead-name').value.trim();
+      const phone = document.getElementById('lead-phone').value.trim();
+      const stand = document.getElementById('lead-stand').value;
+      const status = document.getElementById('lead-status').value;
+      const assignedActivist = document.getElementById('lead-assigned-activist').value;
+      const notes = document.getElementById('lead-notes').value.trim();
+
+      const selectedTags = [];
+      document.querySelectorAll('input[name="lead-tag"]:checked').forEach(cb => selectedTags.push(cb.value));
+
+      if (!name || !phone) {
+        alert('אנא הזן לפחות שם ומספר טלפון ליצירת קשר!');
+        return;
+      }
+
+      if (idVal) {
+        const lead = leadsData.find(l => l.id === parseInt(idVal));
+        if (lead) {
+          lead.name = name;
+          lead.phone = phone;
+          lead.stand = stand;
+          lead.status = status;
+          lead.assignedActivist = assignedActivist;
+          lead.notes = notes;
+          lead.interestTags = selectedTags.length > 0 ? selectedTags : ['שאלות באמונה והשקפה'];
+          lead.interest = selectedTags[0] || 'שאלות באמונה והשקפה';
+        }
+      } else {
+        const newLead = {
+          id: Date.now(),
+          name,
+          phone,
+          stand,
+          week: weeksList[currentWeekIndex].parasha,
+          interest: selectedTags[0] || 'התעניינות ביהדות',
+          interestTags: selectedTags.length > 0 ? selectedTags : ['התעניינות ביהדות / חזרה בתשובה'],
+          status,
+          assignedActivist,
+          notes
+        };
+        leadsData.unshift(newLead);
+      }
+
+      closeLeadModal();
+      renderLeads();
+      syncStateToServer();
+      alert(`כרטיס המתעניין ${name} נשמר בהצלחה במאגר הליווי!`);
+    }
+
+    function deleteLeadFromModal() {
+      const idVal = document.getElementById('lead-edit-id').value;
+      if (!idVal) return;
+      if (confirm('האם אתה בטוח שברצונך למחוק מתעניין זה מהמאגר?')) {
+        leadsData = leadsData.filter(l => l.id !== parseInt(idVal));
+        closeLeadModal();
+        renderLeads();
+        syncStateToServer();
+      }
+    }
+
+
+    // --- 8. AUTHENTICATION, ROLES & ADMIN USERS MANAGEMENT (PAGE 6) ---
+    let usersData = [
+      { id: 1, username: 'yinonshvat', email: 'yinonshvat@hashivenu.org', password: '203084637', fullName: 'ינון שבט', role: 'admin', phone: '', region: 'מנהל תוכנה ראשי', active: true },
+      { id: 2, username: 'אורית', email: 'orit@hashivenu.org', password: '0587993161', fullName: 'אורית', role: 'coordinator', phone: '058-7993161', region: 'רכזת פעילות', active: true }
+    ];
+
+    let currentUser = null;
+
+    async function performLogin() {
+      const identifier = document.getElementById('login-identifier').value.trim().toLowerCase();
+      const password = document.getElementById('login-password').value.trim();
+      const errBox = document.getElementById('login-error-box');
+      errBox.classList.add('hidden');
+
+      let matched = usersData.find(u =>
+        u.active !== false &&
+        (u.username.toLowerCase() === identifier || (u.email && u.email.toLowerCase() === identifier) || (u.fullName && u.fullName.toLowerCase() === identifier)) &&
+        u.password === password
+      );
+
+      if (!matched) {
+        errBox.innerText = 'שם משתמש או סיסמה שגויים. נסה שוב.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      currentUser = matched;
+      sessionStorage.setItem('ashivenu_v2_logged_user', JSON.stringify(currentUser));
+      applyUserRolePermissions();
+      document.getElementById('login-screen-overlay').classList.add('hidden');
+    }
+
+    function performLogout() {
+      currentUser = null;
+      sessionStorage.removeItem('ashivenu_v2_logged_user');
+      document.getElementById('login-identifier').value = '';
+      document.getElementById('login-password').value = '';
+      document.getElementById('login-screen-overlay').classList.remove('hidden');
+    }
+
+    function applyUserRolePermissions() {
+      if (!currentUser) return;
+      const isAdmin = currentUser.role === 'admin';
+      const tabAdmin = document.getElementById('tab-admin');
+      const roleIcon = document.getElementById('current-user-role-icon');
+      const userDisplay = document.getElementById('current-user-display');
+
+      roleIcon.innerText = isAdmin ? '👑' : '📋';
+      userDisplay.innerText = `${currentUser.fullName} (${isAdmin ? 'מנהל תוכנה' : 'רכז/ת'})`;
+
+      if (isAdmin) {
+        tabAdmin.classList.remove('hidden');
+      } else {
+        tabAdmin.classList.add('hidden');
+        if (!document.getElementById('page-admin').classList.contains('hidden')) {
+          switchPage('activists');
+        }
+      }
+    }
+
+    function renderAdminUsers() {
+      const list = document.getElementById('admin-users-list');
+      const badge = document.getElementById('admin-users-count-badge');
+      if (!list) return;
+
+      badge.innerText = `${usersData.length} משתמשים`;
+
+      list.innerHTML = usersData.map(u => `
+        <div class="p-4 flex flex-wrap items-center justify-between gap-4 hover:bg-slate-50 transition text-xs">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl ${u.role === 'admin' ? 'bg-amber-500 text-slate-950' : 'bg-blue-100 text-blue-800'} font-black flex items-center justify-center text-base">
+              ${u.role === 'admin' ? '👑' : '📋'}
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-sm text-slate-900">${u.fullName}</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
+                  ${u.role === 'admin' ? 'מנהל תוכנה (Admin)' : 'רכז/ת שטח (Coordinator)'}
+                </span>
+              </div>
+              <div class="text-slate-500 mt-0.5 flex flex-wrap items-center gap-2 font-mono text-[11px]" dir="ltr">
+                <span>משתמש: <strong>${u.username}</strong></span>
+                ${u.phone ? `<span>• ${u.phone}</span>` : ''}
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5">תפקיד/גזרה: ${u.region || 'כללי'}</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-mono text-[11px]" dir="ltr">סיסמה: ${u.password}</span>
+            <button onclick="editUser(${u.id})" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg transition">✏️ ערוך</button>
+            ${u.username !== 'yinonshvat' ? `
+              <button onclick="deleteUser(${u.id})" class="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-lg transition">🗑️</button>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openUserModal() {
+      document.getElementById('modal-user-title').innerText = '🔐 הוספת רכז / משתמש חדש';
+      document.getElementById('user-edit-id').value = '';
+      document.getElementById('user-full-name').value = '';
+      document.getElementById('user-role').value = 'coordinator';
+      document.getElementById('user-username').value = '';
+      document.getElementById('user-password').value = '';
+      document.getElementById('user-email').value = '';
+      document.getElementById('user-phone').value = '';
+      document.getElementById('user-region').value = 'ירושלים';
+      document.getElementById('modal-user').classList.remove('hidden');
+    }
+
+    function editUser(userId) {
+      const u = usersData.find(x => x.id === userId);
+      if (!u) return;
+      document.getElementById('modal-user-title').innerText = `✏️ עריכת משתמש: ${u.fullName}`;
+      document.getElementById('user-edit-id').value = u.id;
+      document.getElementById('user-full-name').value = u.fullName;
+      document.getElementById('user-role').value = u.role;
+      document.getElementById('user-username').value = u.username;
+      document.getElementById('user-password').value = u.password;
+      document.getElementById('user-email').value = u.email || '';
+      document.getElementById('user-phone').value = u.phone || '';
+      document.getElementById('user-region').value = u.region || '';
+      document.getElementById('modal-user').classList.remove('hidden');
+    }
+
+    function closeUserModal() {
+      document.getElementById('modal-user').classList.add('hidden');
+    }
+
+    function saveUserModal() {
+      const idVal = document.getElementById('user-edit-id').value;
+      const fullName = document.getElementById('user-full-name').value.trim();
+      const role = document.getElementById('user-role').value;
+      const username = document.getElementById('user-username').value.trim();
+      const password = document.getElementById('user-password').value.trim();
+      const email = document.getElementById('user-email').value.trim();
+      const phone = document.getElementById('user-phone').value.trim();
+      const region = document.getElementById('user-region').value.trim();
+
+      if (!fullName || !username || !password) {
+        alert('אנא מלא שם מלא, שם משתמש וסיסמה!');
+        return;
+      }
+
+      if (idVal) {
+        const u = usersData.find(x => x.id === parseInt(idVal));
+        if (u) {
+          u.fullName = fullName;
+          u.role = role;
+          u.username = username;
+          u.password = password;
+          u.email = email;
+          u.phone = phone;
+          u.region = region;
+        }
+      } else {
+        usersData.push({
+          id: Date.now(),
+          fullName,
+          role,
+          username,
+          password,
+          email,
+          phone,
+          region,
+          active: true
+        });
+      }
+
+      closeUserModal();
+      renderAdminUsers();
+      syncStateToServer();
+      alert(`פרטי המשתמש ${fullName} נשמרו בהצלחה!`);
+    }
+
+    function deleteUser(userId) {
+      const u = usersData.find(x => x.id === userId);
+      if (!u) return;
+      if (confirm(`האם למחוק את המשתמש ${u.fullName}?`)) {
+        usersData = usersData.filter(x => x.id !== userId);
+        renderAdminUsers();
+        syncStateToServer();
+      }
+    }
+
+    function exportFullDatabaseBackup() {
+      const backupObj = {
+        exportedAt: new Date().toISOString(),
+        system: 'השיבנו דוכנים',
+        users: usersData,
+        activists: activistsData,
+        stands: standsData,
+        weeklyRosters: weeklyRosters,
+        reflections: reflectionsData,
+        leads: leadsData
+      };
+      const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ashivenu_duchanim_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+    }
+
+
+    // --- 9. PERSISTENT SERVER & LOCAL STORAGE SYNC ---
+    async function syncStateToServer() {
+      const appData = {
+        activistsData,
+        standsData,
+        weeklyRosters,
+        reflectionsData,
+        leadsData
+      };
+      try {
+        localStorage.setItem('ashivenu_v2_app_data', JSON.stringify(appData));
+        localStorage.setItem('ashivenu_v2_users_data', JSON.stringify(usersData));
+        await fetch('/api/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ appData, users: usersData })
+        });
+      } catch (e) {
+        // Offline fallback uses localStorage seamlessly
+      }
+    }
+
+    async function loadStateFromServer() {
+      try {
+        // Clear legacy v1 local storage so old demo data never resurfaces
+        localStorage.removeItem('ashivenu_app_data');
+        localStorage.removeItem('ashivenu_users_data');
+        sessionStorage.removeItem('ashivenu_logged_user');
+
+        const res = await fetch('/api/state');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.users && data.users.length > 0) {
+            usersData = data.users;
+          }
+          if (data.appData) {
+            if (Array.isArray(data.appData.activistsData)) activistsData = data.appData.activistsData;
+            if (Array.isArray(data.appData.standsData)) standsData = data.appData.standsData;
+            if (data.appData.weeklyRosters) weeklyRosters = data.appData.weeklyRosters;
+            if (Array.isArray(data.appData.reflectionsData)) reflectionsData = data.appData.reflectionsData;
+            if (Array.isArray(data.appData.leadsData)) leadsData = data.appData.leadsData;
+          }
+        }
+      } catch (e) {
+        const savedApp = localStorage.getItem('ashivenu_v2_app_data');
+        const savedUsers = localStorage.getItem('ashivenu_v2_users_data');
+        if (savedUsers) usersData = JSON.parse(savedUsers);
+        if (savedApp) {
+          const parsed = JSON.parse(savedApp);
+          if (Array.isArray(parsed.activistsData)) activistsData = parsed.activistsData;
+          if (Array.isArray(parsed.standsData)) standsData = parsed.standsData;
+          if (parsed.weeklyRosters) weeklyRosters = parsed.weeklyRosters;
+          if (Array.isArray(parsed.reflectionsData)) reflectionsData = parsed.reflectionsData;
+          if (Array.isArray(parsed.leadsData)) leadsData = parsed.leadsData;
+        }
+      }
+    }
+
+
+    // --- 10. INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadStateFromServer();
+
+      const savedSessionUser = sessionStorage.getItem('ashivenu_v2_logged_user');
+      if (savedSessionUser) {
+        currentUser = JSON.parse(savedSessionUser);
+        applyUserRolePermissions();
+        document.getElementById('login-screen-overlay').classList.add('hidden');
+      }
+
+      initWeeksNavigator();
+      renderActivistsAccordion();
+      renderStandsRoster();
+      renderReflections();
+      renderLeads();
+      renderAdminUsers();
+    });
+  </script>
+</body>
+</html>
