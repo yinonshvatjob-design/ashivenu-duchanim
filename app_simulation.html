@@ -886,6 +886,51 @@
 
 
   <!-- ========================================== -->
+  <!-- MODAL: שיבוץ חכם של פעילים לעמדה -->
+  <!-- ========================================== -->
+  <div id="modal-assign-activist" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-3.5 max-h-[90vh] flex flex-col">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+        <div>
+          <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
+            <span>👥 שיבוץ לעמדת <span id="assign-modal-stand-name" class="text-amber-600"></span></span>
+          </h3>
+          <p class="text-xs text-slate-500">חפש לפי שם/טלפון או סנן לפי מגדר ולחץ "+ שבץ"</p>
+        </div>
+        <button onclick="closeAssignModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <input type="hidden" id="assign-modal-stand-id">
+
+      <!-- Search & Gender Filter -->
+      <div class="space-y-2 shrink-0">
+        <div class="relative">
+          <input type="text" id="assign-modal-search" oninput="renderAssignModalList()" placeholder="הקלד שם או טלפון לסינון מיידי..." class="w-full pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500 bg-slate-50 focus:bg-white transition">
+          <span class="absolute right-2.5 top-3 text-xs text-slate-400">🔍</span>
+        </div>
+
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+          <button onclick="setAssignGenderFilter('all')" id="assign-gender-all" class="flex-1 py-1 rounded-lg font-bold bg-white text-slate-900 shadow-xs transition">הכל</button>
+          <button onclick="setAssignGenderFilter('male')" id="assign-gender-male" class="flex-1 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">👨 גברים</button>
+          <button onclick="setAssignGenderFilter('female')" id="assign-gender-female" class="flex-1 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">👩 נשים</button>
+        </div>
+      </div>
+
+      <!-- Scrollable List of Available Activists -->
+      <div id="assign-modal-list" class="space-y-1.5 overflow-y-auto custom-scrollbar flex-1 min-h-[200px] max-h-[340px] pr-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="pt-2 border-t border-slate-100 flex justify-end shrink-0">
+        <button onclick="closeAssignModal()" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs">סיים וסגור</button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
   <!-- MODAL: הזנת רפלקציה חדשה לעמדה -->
   <!-- ========================================== -->
   <div id="modal-reflection" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
@@ -2043,35 +2088,104 @@
       }).join('');
     }
 
+    let assignGenderFilter = 'all';
+
     function openAssignModal(standId, standName) {
       const currentRoster = getCurrentWeekRoster();
       if (!currentRoster[standId]) {
         currentRoster[standId] = { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
       }
-      const sData = currentRoster[standId];
+      document.getElementById('assign-modal-stand-id').value = standId;
+      document.getElementById('assign-modal-stand-name').innerText = standName;
+      document.getElementById('assign-modal-search').value = '';
+      setAssignGenderFilter('all');
+      document.getElementById('modal-assign-activist').classList.remove('hidden');
+      setTimeout(() => document.getElementById('assign-modal-search').focus(), 50);
+    }
 
-      const available = activistsData.filter(a => !sData.assignedIds.includes(a.id));
+    function closeAssignModal() {
+      document.getElementById('modal-assign-activist').classList.add('hidden');
+    }
+
+    function setAssignGenderFilter(gender) {
+      assignGenderFilter = gender;
+      ['all', 'male', 'female'].forEach(g => {
+        const btn = document.getElementById(`assign-gender-${g}`);
+        if (!btn) return;
+        btn.className = g === gender
+          ? 'flex-1 py-1 rounded-lg font-bold bg-white text-slate-900 shadow-xs transition'
+          : 'flex-1 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition';
+      });
+      renderAssignModalList();
+    }
+
+    function renderAssignModalList() {
+      const standId = document.getElementById('assign-modal-stand-id').value;
+      const search = document.getElementById('assign-modal-search').value.trim().toLowerCase();
+      const listEl = document.getElementById('assign-modal-list');
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId] || { assignedIds: [] };
+
+      let available = activistsData.filter(a => !sData.assignedIds.includes(a.id));
+      if (assignGenderFilter !== 'all') {
+        available = available.filter(a => (a.gender || 'male') === assignGenderFilter);
+      }
+      if (search) {
+        available = available.filter(a =>
+          a.name.toLowerCase().includes(search) ||
+          (a.phone && a.phone.includes(search)) ||
+          (a.preferredStand && a.preferredStand.toLowerCase().includes(search))
+        );
+      }
+
       if (available.length === 0) {
-        alert('כל הפעילים במאגר כבר משובצים לעמדה זו!');
+        listEl.innerHTML = '<div class="text-xs text-slate-400 text-center py-8">לא נמצאו פעילים פנויים התואמים לחיפוש</div>';
         return;
       }
 
-      const options = available.map((a, i) => `${i + 1}. ${a.gender === 'female' ? '👩' : '👨'} ${a.name} (${a.phone || 'ללא טלפון'})`).join('\n');
-      const pick = prompt(`בחר פעיל/ה לשיבוץ בעמדת ${standName}:\n\n${options}\n\nהזן את המספר:`);
-      const idx = parseInt(pick) - 1;
-      if (!isNaN(idx) && available[idx]) {
-        const picked = available[idx];
+      listEl.innerHTML = available.map(a => {
+        const isFemale = a.gender === 'female';
+        return `
+          <div class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 hover:border-amber-400 bg-white transition text-xs">
+            <div>
+              <div class="flex items-center gap-1.5 font-bold text-slate-900">
+                <span>${isFemale ? '👩' : '👨'}</span>
+                <span>${a.name}</span>
+              </div>
+              <div class="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                <span class="font-mono" dir="ltr">${a.phone || 'ללא טלפון'}</span>
+                ${a.preferredStand ? `<span class="text-slate-400">• ${a.preferredStand}</span>` : ''}
+              </div>
+            </div>
+            <button onclick="assignActivistFromModal(${a.id})" class="bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] transition shrink-0">
+              + שבץ
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function assignActivistFromModal(actId) {
+      const standId = document.getElementById('assign-modal-stand-id').value;
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      const picked = activistsData.find(a => a.id === actId);
+      if (!sData || !picked) return;
+
+      if (!sData.assignedIds.includes(picked.id)) {
         sData.assignedIds.push(picked.id);
-        if (picked.gender === 'female') {
-          if (!sData.leadFemaleId) sData.leadFemaleId = picked.id;
-        } else {
-          if (!sData.leadMaleId) sData.leadMaleId = picked.id;
-        }
-        renderStandsRoster();
-        renderActivistsAccordion();
-        updateMapMarkers();
-        syncStateToServer();
       }
+      if (picked.gender === 'female') {
+        if (!sData.leadFemaleId) sData.leadFemaleId = picked.id;
+      } else {
+        if (!sData.leadMaleId) sData.leadMaleId = picked.id;
+      }
+
+      renderAssignModalList();
+      renderStandsRoster();
+      renderActivistsAccordion();
+      updateMapMarkers();
+      syncStateToServer();
     }
 
     function toggleStandLeadInWeek(standId, actId) {
