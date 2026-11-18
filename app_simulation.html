@@ -201,11 +201,11 @@
             סגור הכל ⮝
           </button>
 
-          <button onclick="exportActivistsDirectoryPdf(true)" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1 shadow-xs" title="ייצוא אלפון פעילים פוטנציאליים ל-PDF">
+          <button onclick="exportActivistsDirectoryPdf('active_and_potential')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1 shadow-xs" title="ייצוא אלפון פעילים קיימים ופעילים פוטנציאליים בטבלאות נפרדות ל-PDF">
             <span>📞</span>
-            <span>אלפון פוטנציאליים</span>
+            <span>אלפון קיימים ופוטנציאליים</span>
           </button>
-          <button onclick="exportActivistsDirectoryPdf(false)" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1 shadow-xs" title="ייצוא אלפון לא פוטנציאליים עם הערת סטטוס ל-PDF">
+          <button onclick="exportActivistsDirectoryPdf('not_potential')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1 shadow-xs" title="ייצוא אלפון לא פוטנציאליים עם הערת סטטוס ל-PDF">
             <span>📋</span>
             <span>לא פוטנציאליים + סטטוס</span>
           </button>
@@ -3187,55 +3187,84 @@
       openPrintWindow(`מעקב יום חמישי - ${currentWeek.parasha}`, html, true);
     }
 
-    function exportActivistsDirectoryPdf(isPotential) {
-      const filtered = activistsData.filter(a => isPotential ? a.status !== 'not_potential' : a.status === 'not_potential');
-      const title = isPotential ? 'אלפון פעילים פוטנציאליים (לתקשורת)' : 'אלפון פעילים לא פוטנציאליים + הערת סטטוס';
+    function exportActivistsDirectoryPdf(mode) {
       const statusLabels = { available: 'זמין/ה', busy: 'תפוס/ה', maybe: 'אולי', not_potential: 'לא פוטנציאלי' };
 
-      const rowsHtml = filtered.map((a, idx) => `
-        <tr style="background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-          <td style="padding:5px 7px;border:1px solid #cbd5e1;text-align:center;">${idx + 1}</td>
-          <td style="padding:5px 7px;border:1px solid #cbd5e1;font-weight:700;">${a.gender === 'female' ? '👩' : '👨'} ${escapeHtml(a.name)}</td>
-          <td style="padding:5px 7px;border:1px solid #cbd5e1;font-family:monospace;" dir="ltr">${escapeHtml(a.phone || '-')}</td>
-          <td style="padding:5px 7px;border:1px solid #cbd5e1;">${escapeHtml(a.city || '-')}</td>
-          ${isPotential
-            ? `<td style="padding:5px 7px;border:1px solid #cbd5e1;">${escapeHtml(a.preferredStand || '-')}</td>
-               <td style="padding:5px 7px;border:1px solid #cbd5e1;">${escapeHtml(statusLabels[a.status] || a.status || '-')}</td>`
-            : `<td style="padding:5px 7px;border:1px solid #cbd5e1;">${escapeHtml(a.statusNote || a.notes || 'ללא הערת סטטוס')}</td>`
-          }
-        </tr>
-      `).join('');
+      const buildTable = (list, heading, badgeColor, showStatusNote) => {
+        const rows = list.map((a, idx) => `
+          <tr style="background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+            <td style="padding:5px 7px;border:1px solid #cbd5e1;text-align:center;">${idx + 1}</td>
+            <td style="padding:5px 7px;border:1px solid #cbd5e1;font-weight:700;">${a.gender === 'female' ? '👩' : '👨'} ${escapeHtml(a.name)}</td>
+            <td style="padding:5px 7px;border:1px solid #cbd5e1;font-family:monospace;" dir="ltr">${escapeHtml(a.phone || '-')}</td>
+            <td style="padding:5px 7px;border:1px solid #cbd5e1;">${escapeHtml(a.city || '-')}</td>
+            ${showStatusNote
+              ? `<td style="padding:5px 7px;border:1px solid #cbd5e1;">${escapeHtml(a.statusNote || a.notes || 'ללא הערת סטטוס')}</td>`
+              : `<td style="padding:5px 7px;border:1px solid #cbd5e1;">${escapeHtml(a.preferredStand || '-')}</td>
+                 <td style="padding:5px 7px;border:1px solid #cbd5e1;">${escapeHtml(statusLabels[a.status] || a.status || '-')}</td>`
+            }
+          </tr>
+        `).join('');
 
+        return `
+          <div style="margin-bottom:18px;break-inside:avoid;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <h2 style="margin:0;font-size:13.5px;font-weight:800;color:#0f172a;">${escapeHtml(heading)}</h2>
+              <span style="font-size:10.5px;font-weight:700;background:${badgeColor};padding:2px 8px;border-radius:99px;">סה"כ: ${list.length}</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead>
+                <tr style="background:#0f172a;color:#ffffff;">
+                  <th style="padding:6px;border:1px solid #0f172a;width:32px;">#</th>
+                  <th style="padding:6px;border:1px solid #0f172a;text-align:right;">שם מלא</th>
+                  <th style="padding:6px;border:1px solid #0f172a;text-align:right;">טלפון</th>
+                  <th style="padding:6px;border:1px solid #0f172a;text-align:right;">עיר</th>
+                  ${showStatusNote
+                    ? `<th style="padding:6px;border:1px solid #0f172a;text-align:right;">הערת סטטוס / סיבה</th>`
+                    : `<th style="padding:6px;border:1px solid #0f172a;text-align:right;">עמדה מועדפת</th>
+                       <th style="padding:6px;border:1px solid #0f172a;text-align:right;">סטטוס</th>`
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                ${rows || `<tr><td colspan="${showStatusNote ? 5 : 6}" style="padding:12px;text-align:center;color:#64748b;border:1px solid #cbd5e1;">אין רשומות להצגה</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        `;
+      };
+
+      if (mode === 'not_potential') {
+        const notPotential = activistsData.filter(a => a.status === 'not_potential');
+        const title = 'אלפון פעילים לא פוטנציאליים + הערת סטטוס';
+        const html = `
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #0f172a;padding-bottom:6px;margin-bottom:12px;">
+            <div>
+              <h1 style="margin:0;font-size:16px;font-weight:800;">📋 ${escapeHtml(title)}</h1>
+              <div style="font-size:10.5px;color:#475569;">השיבנו דוכנים • הופק בתאריך ${new Date().toLocaleDateString('he-IL')}</div>
+            </div>
+          </div>
+          ${buildTable(notPotential, 'פעילים לא פוטנציאליים', '#fee2e2', true)}
+        `;
+        openPrintWindow(title, html, false);
+        return;
+      }
+
+      const existing = activistsData.filter(a => (a.status || 'available') === 'available');
+      const potential = activistsData.filter(a => a.status === 'maybe' || a.status === 'busy');
+      const title = 'אלפון פעילים קיימים ופעילים פוטנציאליים';
       const html = `
-        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #0f172a;padding-bottom:6px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #0f172a;padding-bottom:6px;margin-bottom:12px;">
           <div>
-            <h1 style="margin:0;font-size:16px;font-weight:800;">${isPotential ? '📞' : '📋'} ${escapeHtml(title)}</h1>
+            <h1 style="margin:0;font-size:16px;font-weight:800;">📞 ${escapeHtml(title)}</h1>
             <div style="font-size:10.5px;color:#475569;">השיבנו דוכנים • הופק בתאריך ${new Date().toLocaleDateString('he-IL')}</div>
           </div>
           <div style="font-size:11px;font-weight:700;background:#f8fafc;border:1px solid #cbd5e1;padding:4px 10px;border-radius:6px;">
-            סה"כ: ${filtered.length} פעילים
+            קיימים: ${existing.length} | פוטנציאליים: ${potential.length}
           </div>
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">
-          <thead>
-            <tr style="background:#0f172a;color:#ffffff;">
-              <th style="padding:6px;border:1px solid #0f172a;width:32px;">#</th>
-              <th style="padding:6px;border:1px solid #0f172a;text-align:right;">שם מלא</th>
-              <th style="padding:6px;border:1px solid #0f172a;text-align:right;">טלפון</th>
-              <th style="padding:6px;border:1px solid #0f172a;text-align:right;">עיר</th>
-              ${isPotential
-                ? `<th style="padding:6px;border:1px solid #0f172a;text-align:right;">עמדה מועדפת</th>
-                   <th style="padding:6px;border:1px solid #0f172a;text-align:right;">סטטוס</th>`
-                : `<th style="padding:6px;border:1px solid #0f172a;text-align:right;">הערת סטטוס / סיבה</th>`
-              }
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml || `<tr><td colspan="${isPotential ? 6 : 5}" style="padding:14px;text-align:center;color:#64748b;border:1px solid #cbd5e1;">אין רשומות להצגה</td></tr>`}
-          </tbody>
-        </table>
+        ${buildTable(existing, '1. פעילים קיימים (זמינים במערך)', '#dcfce7', false)}
+        ${buildTable(potential, '2. פעילים פוטנציאליים (לתקשורת וגיוס)', '#fef3c7', false)}
       `;
-
       openPrintWindow(title, html, false);
     }
 
