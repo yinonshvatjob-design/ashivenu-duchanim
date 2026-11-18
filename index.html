@@ -98,39 +98,39 @@
       </div>
 
       <!-- Main Tabs Navigation -->
-      <nav class="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 overflow-x-auto custom-scrollbar">
-        <button onclick="switchPage('activists')" id="tab-activists" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition text-amber-400 bg-slate-900 shadow-xs">
+      <nav class="w-full lg:w-auto flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 overflow-x-auto custom-scrollbar gap-1">
+        <button onclick="switchPage('activists')" id="tab-activists" class="page-tab shrink-0 whitespace-nowrap flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition text-amber-400 bg-slate-900 shadow-xs">
           <span>👥</span>
           <span>1. מאגר פעילים</span>
           <span id="badge-activists-count" class="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full">0</span>
         </button>
 
-        <button onclick="switchPage('map')" id="tab-map" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+        <button onclick="switchPage('map')" id="tab-map" class="page-tab shrink-0 whitespace-nowrap flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
           <span>🗺️</span>
           <span>2. מפת עמדות</span>
           <span id="badge-stands-count" class="bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded-full">0 עמדות</span>
         </button>
 
-        <button onclick="switchPage('stands')" id="tab-stands" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+        <button onclick="switchPage('stands')" id="tab-stands" class="page-tab shrink-0 whitespace-nowrap flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
           <span>📋</span>
           <span>3. שיבוץ שבועי</span>
           <span id="header-week-pill" class="bg-blue-500/20 text-blue-300 text-[10px] px-1.5 py-0.2 rounded-full">פרשת ויצא</span>
         </button>
 
-        <button onclick="switchPage('reflections')" id="tab-reflections" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+        <button onclick="switchPage('reflections')" id="tab-reflections" class="page-tab shrink-0 whitespace-nowrap flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
           <span>💡</span>
           <span>4. רפלקציות ו-AI</span>
           <span class="bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0.2 rounded-full">למידה</span>
         </button>
 
-        <button onclick="switchPage('leads')" id="tab-leads" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+        <button onclick="switchPage('leads')" id="tab-leads" class="page-tab shrink-0 whitespace-nowrap flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
           <span>🌱</span>
           <span>5. מתעניינים בתשובה</span>
           <span id="badge-leads-count" class="bg-rose-500/20 text-rose-300 text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
         </button>
 
         <!-- Admin Only Tab (Hidden for Coordinators) -->
-        <button onclick="switchPage('admin')" id="tab-admin" class="page-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 hover:text-white transition">
+        <button onclick="switchPage('admin')" id="tab-admin" class="page-tab shrink-0 whitespace-nowrap flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 hover:text-white transition">
           <span>🔐</span>
           <span>6. ניהול רכזים</span>
         </button>
@@ -170,9 +170,9 @@
           <p class="text-xs text-slate-500">ניהול פרטי קשר, זמינות שבועית והערות סטטוס מתחלפות למשמרות חמישי</p>
         </div>
 
-        <div class="flex items-center gap-2">
-          <div class="relative">
-            <input type="text" id="activist-search" oninput="renderActivistsAccordion()" placeholder="חיפוש לפי שם, טלפון או עיר..." class="w-64 pl-3 pr-8 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500 bg-slate-50 focus:bg-white transition">
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="activist-search" oninput="renderActivistsAccordion()" placeholder="חיפוש לפי שם, טלפון או עיר..." class="w-full pl-3 pr-8 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500 bg-slate-50 focus:bg-white transition">
             <span class="absolute right-2.5 top-2.5 text-xs text-slate-400">🔍</span>
           </div>
           
@@ -250,10 +250,10 @@
       </div>
 
       <!-- Split View: Map + Live Stand List Drawer -->
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[620px]">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:h-[620px]">
         
         <!-- Live Side List -->
-        <div class="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col h-full shadow-xs">
+        <div class="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col max-h-[260px] lg:max-h-full lg:h-full shadow-xs">
           <div class="font-bold text-xs text-slate-700 pb-2 border-b border-slate-100 flex items-center justify-between">
             <span>רשימת עמדות ומוקדים</span>
             <span class="text-[10px] text-slate-400">עריכה, מיקוד ושיבוץ</span>
@@ -265,9 +265,9 @@
         </div>
 
         <!-- Interactive Leaflet Map Container -->
-        <div class="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 p-1.5 h-full relative shadow-xs">
+        <div class="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 p-1.5 h-[420px] lg:h-full relative shadow-xs">
           <!-- Floating Pick-Location Banner -->
-          <div id="map-pick-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[400] bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border-2 border-amber-400 flex items-center gap-3 text-xs">
+          <div id="map-pick-banner" class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-[400] w-[92%] sm:w-auto bg-slate-900 text-white px-3 sm:px-4 py-2.5 rounded-xl shadow-2xl border-2 border-amber-400 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-center">
             <span class="animate-bounce text-base">📍</span>
             <span>לחץ על הנקודה הרצויה במפה כדי לעדכן את המיקום של <strong id="map-pick-stand-name" class="text-amber-300"></strong></span>
             <button onclick="cancelMapLocationPick()" class="bg-red-500 hover:bg-red-600 text-white font-bold px-2.5 py-1 rounded-lg text-[11px]">ביטול</button>
