@@ -1694,57 +1694,60 @@
         // Status color calculation
         const statusColor = assigned.length >= stand.requiredActivists && hasAnyLead ? '#10b981' : assigned.length > 0 ? '#f59e0b' : '#ef4444';
 
-        const customIcon = L.divIcon({
-          className: 'custom-map-pin',
-          html: `
-            <div style="background-color: ${statusColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;">
-              ${stand.type === 'stand' ? '📍' : '📖'}
-            </div>
-          `,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        });
+        const coords = Array.isArray(stand.coords) && stand.coords.length === 2 ? stand.coords : [31.7815, 35.2175];
+        if (leafletMapInstance) {
+          const customIcon = L.divIcon({
+            className: 'custom-map-pin',
+            html: `
+              <div style="background-color: ${statusColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;">
+                ${stand.type === 'stand' ? '📍' : '📖'}
+              </div>
+            `,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
 
-        const marker = L.marker(stand.coords, { icon: customIcon, draggable: true }).addTo(leafletMapInstance);
+          const marker = L.marker(coords, { icon: customIcon, draggable: true }).addTo(leafletMapInstance);
 
-        marker.on('dragend', (e) => {
-          const pos = e.target.getLatLng();
-          stand.coords = [Number(pos.lat.toFixed(6)), Number(pos.lng.toFixed(6))];
-          updateMapMarkers();
-          syncStateToServer();
-        });
-        
-        marker.bindPopup(`
-          <div dir="rtl" style="font-family: 'Rubik', sans-serif; min-width: 230px;">
-            <div style="font-weight: bold; font-size: 14px; color: #0f172a; margin-bottom: 2px;">${stand.name}</div>
-            <div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">${stand.address || stand.city || ''} ${stand.hours ? '• ' + stand.hours : ''}</div>
-            <div style="font-size: 11px; margin-bottom: 4px; line-height: 1.5;">
-              <div><strong>👨 אחראי:</strong> ${maleLead ? maleLead.name : '<span style="color:#94a3b8">טרם מונה</span>'}</div>
-            </div>
-            <div style="font-size: 11px; margin-bottom: 6px;">
-              <strong>פעילים משובצים (${assigned.length}/${stand.requiredActivists}):</strong><br>
-              ${assigned.map(a => `• ${a.gender === 'female' ? '👩' : '👨'} ${a.name}`).join('<br>') || 'אין עדיין משובצים'}
-            </div>
-            <div style="font-size: 10px; background: #f8fafc; padding: 4px 6px; border-radius: 6px; border: 1px solid #e2e8f0; color: #334155; margin-bottom: 8px;">
-              <strong>סטטוס השבוע:</strong> ${sData.note || 'שגרה'}
-            </div>
+          marker.on('dragend', (e) => {
+            const pos = e.target.getLatLng();
+            stand.coords = [Number(pos.lat.toFixed(6)), Number(pos.lng.toFixed(6))];
+            updateMapMarkers();
+            syncStateToServer();
+          });
+          
+          marker.bindPopup(`
+            <div dir="rtl" style="font-family: 'Rubik', sans-serif; min-width: 230px;">
+              <div style="font-weight: bold; font-size: 14px; color: #0f172a; margin-bottom: 2px;">${stand.name}</div>
+              <div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">${stand.address || stand.city || ''} ${stand.hours ? '• ' + stand.hours : ''}</div>
+              <div style="font-size: 11px; margin-bottom: 4px; line-height: 1.5;">
+                <div><strong>👨 אחראי:</strong> ${maleLead ? maleLead.name : '<span style="color:#94a3b8">טרם מונה</span>'}</div>
+              </div>
+              <div style="font-size: 11px; margin-bottom: 6px;">
+                <strong>פעילים משובצים (${assigned.length}/${stand.requiredActivists}):</strong><br>
+                ${assigned.map(a => `• ${a.gender === 'female' ? '👩' : '👨'} ${a.name}`).join('<br>') || 'אין עדיין משובצים'}
+              </div>
+              <div style="font-size: 10px; background: #f8fafc; padding: 4px 6px; border-radius: 6px; border: 1px solid #e2e8f0; color: #334155; margin-bottom: 8px;">
+                <strong>סטטוס השבוע:</strong> ${sData.note || 'שגרה'}
+              </div>
 
-            <div style="display: flex; gap: 6px;">
-              <button onclick="jumpToStandRoster('${stand.id}')" style="flex: 1; background: #0f172a; color: white; font-weight: bold; font-size: 11px; padding: 6px; border-radius: 8px; border: none; cursor: pointer; text-align: center;">
-                📋 לשיבוץ בדף 3
-              </button>
-              <button onclick="openEditStandModal('${stand.id}')" style="background: #f59e0b; color: #0f172a; font-weight: bold; font-size: 11px; padding: 6px 8px; border-radius: 8px; border: none; cursor: pointer;">
-                ✏️ ערוך
-              </button>
+              <div style="display: flex; gap: 6px;">
+                <button onclick="jumpToStandRoster('${stand.id}')" style="flex: 1; background: #0f172a; color: white; font-weight: bold; font-size: 11px; padding: 6px; border-radius: 8px; border: none; cursor: pointer; text-align: center;">
+                  📋 לשיבוץ בדף 3
+                </button>
+                <button onclick="openEditStandModal('${stand.id}')" style="background: #f59e0b; color: #0f172a; font-weight: bold; font-size: 11px; padding: 6px 8px; border-radius: 8px; border: none; cursor: pointer;">
+                  ✏️ ערוך
+                </button>
+              </div>
             </div>
-          </div>
-        `);
+          `);
 
-        mapMarkers.push(marker);
+          mapMarkers.push(marker);
+        }
 
         listHtml += `
           <div class="p-2.5 rounded-xl border border-slate-200/70 hover:border-amber-400 hover:bg-slate-50 transition text-xs space-y-1.5">
-            <div onclick="focusStandOnMap(${stand.coords[0]}, ${stand.coords[1]})" class="cursor-pointer">
+            <div onclick="focusStandOnMap(${coords[0]}, ${coords[1]})" class="cursor-pointer">
               <div class="flex items-center justify-between font-bold text-slate-800">
                 <span class="flex items-center gap-1.5">
                   <span>${stand.type === 'stand' ? '🟡' : '🔵'}</span>
@@ -1758,7 +1761,6 @@
                   <span>משובצים: ${assigned.length}/${stand.requiredActivists}</span>
                   <span>${maleLead ? '👨 ' + maleLead.name : 'ללא אחראי'}</span>
                 </div>
-                ${femaleLead ? `<div class="text-left text-rose-700 font-semibold">👩 אחראית: ${femaleLead.name}</div>` : ''}
               </div>
             </div>
 
