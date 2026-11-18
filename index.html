@@ -2,7 +2,15 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="השיבנו דוכנים">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" href="/icon.svg">
   <title>השיבנו דוכנים - מערכת שליטה, עמדות, שיבוצים ורפלקציות</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,8 +20,18 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
+    html {
+      -webkit-tap-highlight-color: transparent;
+      scroll-behavior: smooth;
+    }
     body {
       font-family: 'Rubik', sans-serif;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    @media (max-width: 768px) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
     }
     .custom-scrollbar::-webkit-scrollbar {
       width: 6px;
@@ -3055,6 +3073,79 @@
       renderLeads();
       renderAdminUsers();
     });
+
+    // --- 11. PWA INSTALL & SERVICE WORKER ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      showInstallBanner(false);
+    });
+
+    function isIosDevice() {
+      return /iphone|ipad|ipod/i.test(navigator.userAgent);
+    }
+
+    function isStandaloneMode() {
+      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+
+    function showInstallBanner(isIos) {
+      if (isStandaloneMode() || sessionStorage.getItem('ashivenu_install_dismissed')) return;
+      const banner = document.getElementById('pwa-install-banner');
+      if (!banner) return;
+      const btn = document.getElementById('pwa-install-btn');
+      const desc = document.getElementById('pwa-install-desc');
+      if (isIos) {
+        desc.innerText = 'באייפון: לחץ על כפתור השיתוף (⬆️) ובחר "הוסף למסך הבית"';
+        btn.classList.add('hidden');
+      } else {
+        desc.innerText = 'התקן את "השיבנו דוכנים" כאפליקציה לגישה מהירה מהנייד';
+        btn.classList.remove('hidden');
+      }
+      banner.classList.remove('hidden');
+    }
+
+    function dismissInstallBanner() {
+      sessionStorage.setItem('ashivenu_install_dismissed', '1');
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    async function triggerInstallApp() {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      dismissInstallBanner();
+    }
+
+    window.addEventListener('load', () => {
+      if (isIosDevice() && !isStandaloneMode()) {
+        setTimeout(() => showInstallBanner(true), 1500);
+      }
+    });
   </script>
+
+  <!-- PWA Install Banner (Mobile) -->
+  <div id="pwa-install-banner" class="hidden fixed bottom-3 left-3 right-3 z-50 bg-slate-900 text-white rounded-2xl p-3.5 shadow-2xl border border-amber-400/40 flex items-center justify-between gap-3 max-w-md mx-auto">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <img src="/icon.svg" alt="אייקון" class="w-10 h-10 rounded-xl shrink-0">
+      <div class="min-w-0">
+        <div class="font-bold text-xs text-amber-400">התקנה כאפליקציה</div>
+        <div id="pwa-install-desc" class="text-[11px] text-slate-200 leading-snug"></div>
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5 shrink-0">
+      <button id="pwa-install-btn" onclick="triggerInstallApp()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-xl transition">📲 התקן</button>
+      <button onclick="dismissInstallBanner()" class="text-slate-400 hover:text-white text-sm px-1.5 py-1" title="סגור">✕</button>
+    </div>
+  </div>
 </body>
 </html>

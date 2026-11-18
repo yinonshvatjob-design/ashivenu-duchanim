@@ -1,0 +1,21 @@
+{
+  "name": "השיבנו דוכנים — מערכת ניהול עמדות",
+  "short_name": "השיבנו דוכנים",
+  "description": "מערכת ניהול עמדות, שיבוץ פעילים ומפת איוש בזמן אמת",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "dir": "rtl",
+  "lang": "he",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
