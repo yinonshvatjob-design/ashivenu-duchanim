@@ -265,10 +265,10 @@
         </div>
 
         <!-- Filter pills for map -->
-        <div class="flex items-center gap-2 text-xs">
-          <button onclick="filterMapMarkers('all')" class="map-filter-btn px-3 py-1.5 bg-slate-900 text-white font-bold rounded-lg transition">הכל (5)</button>
-          <button onclick="filterMapMarkers('stand')" class="map-filter-btn px-3 py-1.5 bg-amber-100 text-amber-900 font-bold rounded-lg hover:bg-amber-200 transition">🟡 דוכני שטח (4)</button>
-          <button onclick="filterMapMarkers('center')" class="map-filter-btn px-3 py-1.5 bg-blue-100 text-blue-900 font-bold rounded-lg hover:bg-blue-200 transition">🔵 מרכז שיעורים (1)</button>
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <button onclick="filterMapMarkers('all')" class="map-filter-btn px-3 py-1.5 bg-slate-900 text-white font-bold rounded-lg transition">הכל (<span id="map-filter-all-count">0</span>)</button>
+          <button onclick="filterMapMarkers('stand')" class="map-filter-btn px-3 py-1.5 bg-amber-100 text-amber-900 font-bold rounded-lg hover:bg-amber-200 transition">🟡 דוכני שטח (<span id="map-filter-stand-count">0</span>)</button>
+          <button onclick="filterMapMarkers('center')" class="map-filter-btn px-3 py-1.5 bg-blue-100 text-blue-900 font-bold rounded-lg hover:bg-blue-200 transition">🔵 מרכז שיעורים (<span id="map-filter-center-count">0</span>)</button>
           <button onclick="openAddStandModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs">
             <span>+</span>
             <span>עמדה חדשה</span>
@@ -1668,10 +1668,17 @@
     }
 
     function updateMapMarkers() {
-      if (!leafletMapInstance) return;
+      const allCountEl = document.getElementById('map-filter-all-count');
+      const standCountEl = document.getElementById('map-filter-stand-count');
+      const centerCountEl = document.getElementById('map-filter-center-count');
+      if (allCountEl) allCountEl.innerText = standsData.length;
+      if (standCountEl) standCountEl.innerText = standsData.filter(s => (s.type || 'stand') === 'stand').length;
+      if (centerCountEl) centerCountEl.innerText = standsData.filter(s => s.type === 'center').length;
 
-      mapMarkers.forEach(m => leafletMapInstance.removeLayer(m));
-      mapMarkers = [];
+      if (leafletMapInstance) {
+        mapMarkers.forEach(m => leafletMapInstance.removeLayer(m));
+        mapMarkers = [];
+      }
 
       const currentRoster = getCurrentWeekRoster();
       let listHtml = '';
