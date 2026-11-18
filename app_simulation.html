@@ -848,6 +848,13 @@
           </div>
         </div>
 
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">👨 אחראי עמדה קבוע (גבר בלבד, קבוע לכל השבועות)</label>
+          <select id="edit-stand-lead" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+            <option value="">ללא אחראי קבוע</option>
+          </select>
+        </div>
+
         <!-- Physical Map Coordinates & Pick from Map -->
         <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
           <div class="flex items-center justify-between">
@@ -1623,12 +1630,10 @@
       updateMapMarkers();
     }
 
-    function getStandLeads(sData) {
-      const maleLead = activistsData.find(a => a.id === sData.leadMaleId)
-        || (sData.leadId ? activistsData.find(a => a.id === sData.leadId && (a.gender || 'male') === 'male') : null);
-      const femaleLead = activistsData.find(a => a.id === sData.leadFemaleId)
-        || (sData.leadId ? activistsData.find(a => a.id === sData.leadId && a.gender === 'female') : null);
-      return { maleLead, femaleLead };
+    function getStandLeads(stand, sData) {
+      const leadId = (stand && stand.permanentLeadId) || (sData && (sData.leadMaleId || sData.leadId)) || null;
+      const maleLead = leadId ? activistsData.find(a => a.id === leadId && (a.gender || 'male') === 'male') : null;
+      return { maleLead, femaleLead: null };
     }
 
     function updateMapMarkers() {
@@ -1645,8 +1650,8 @@
 
         const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
         const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
-        const { maleLead, femaleLead } = getStandLeads(sData);
-        const hasAnyLead = Boolean(maleLead || femaleLead);
+        const { maleLead } = getStandLeads(stand, sData);
+        const hasAnyLead = Boolean(maleLead);
 
         // Status color calculation
         const statusColor = assigned.length >= stand.requiredActivists && hasAnyLead ? '#10b981' : assigned.length > 0 ? '#f59e0b' : '#ef4444';
@@ -1677,7 +1682,6 @@
             <div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">${stand.address || stand.city || ''} ${stand.hours ? '• ' + stand.hours : ''}</div>
             <div style="font-size: 11px; margin-bottom: 4px; line-height: 1.5;">
               <div><strong>👨 אחראי:</strong> ${maleLead ? maleLead.name : '<span style="color:#94a3b8">טרם מונה</span>'}</div>
-              <div><strong>👩 אחראית:</strong> ${femaleLead ? femaleLead.name : '<span style="color:#94a3b8">טרם מונתה</span>'}</div>
             </div>
             <div style="font-size: 11px; margin-bottom: 6px;">
               <strong>פעילים משובצים (${assigned.length}/${stand.requiredActivists}):</strong><br>
@@ -1763,6 +1767,14 @@
       updateMapMarkers();
     }
 
+    function populateEditStandLeadSelect(selectedId) {
+      const sel = document.getElementById('edit-stand-lead');
+      if (!sel) return;
+      const males = activistsData.filter(a => (a.gender || 'male') === 'male');
+      sel.innerHTML = '<option value="">-- טרם מונה אחראי קבוע --</option>' +
+        males.map(a => `<option value="${a.id}" ${String(selectedId) === String(a.id) ? 'selected' : ''}>${a.name}${a.phone ? ' (' + a.phone + ')' : ''}</option>`).join('');
+    }
+
     function openAddStandModal() {
       document.getElementById('edit-stand-id').value = '';
       document.getElementById('edit-stand-name').value = '';
@@ -1773,6 +1785,7 @@
       document.getElementById('edit-stand-req').value = 2;
       document.getElementById('edit-stand-lat').value = 31.7815;
       document.getElementById('edit-stand-lng').value = 35.2175;
+      populateEditStandLeadSelect('');
       document.getElementById('modal-edit-stand').classList.remove('hidden');
     }
 
@@ -1789,6 +1802,7 @@
       document.getElementById('edit-stand-req').value = stand.requiredActivists || 2;
       document.getElementById('edit-stand-lat').value = stand.coords ? stand.coords[0] : 31.7815;
       document.getElementById('edit-stand-lng').value = stand.coords ? stand.coords[1] : 35.2175;
+      populateEditStandLeadSelect(stand.permanentLeadId || '');
 
       document.getElementById('modal-edit-stand').classList.remove('hidden');
     }
@@ -1823,6 +1837,8 @@
       const req = parseInt(document.getElementById('edit-stand-req').value) || 2;
       const lat = parseFloat(document.getElementById('edit-stand-lat').value) || 31.7815;
       const lng = parseFloat(document.getElementById('edit-stand-lng').value) || 35.2175;
+      const leadRaw = document.getElementById('edit-stand-lead') ? document.getElementById('edit-stand-lead').value : '';
+      const permanentLeadId = leadRaw ? parseInt(leadRaw) : null;
 
       if (!name) {
         alert('אנא הזן שם לעמדה!');
@@ -1839,6 +1855,7 @@
           stand.hours = hours;
           stand.requiredActivists = req;
           stand.coords = [lat, lng];
+          stand.permanentLeadId = permanentLeadId;
         }
       } else {
         standsData.push({
@@ -1849,7 +1866,8 @@
           address,
           coords: [lat, lng],
           hours,
-          requiredActivists: req
+          requiredActivists: req,
+          permanentLeadId
         });
       }
 
@@ -1991,12 +2009,13 @@
       }
 
       const currentRoster = getCurrentWeekRoster();
+      const maleActivists = activistsData.filter(a => (a.gender || 'male') === 'male');
 
       grid.innerHTML = standsData.map(stand => {
         const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
         const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
-        const { maleLead, femaleLead } = getStandLeads(sData);
-        const hasAnyLead = Boolean(maleLead || femaleLead);
+        const { maleLead } = getStandLeads(stand, sData);
+        const hasAnyLead = Boolean(maleLead);
 
         return `
           <div id="stand-card-${stand.id}" class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between space-y-4">
@@ -2022,17 +2041,16 @@
                 </span>
               </div>
 
-              <!-- Male & Female Leads Box -->
+              <!-- Permanent Male Lead Box -->
               <div class="mt-3 bg-amber-50/60 border border-amber-200/70 rounded-xl p-2.5 text-xs space-y-1.5">
-                <div class="text-amber-900 font-bold text-[11px]">⭐ אחראי ואחראית עמדה:</div>
-                <div class="flex items-center justify-between">
-                  <span class="text-slate-700">👨 <strong>אחראי:</strong> ${maleLead ? maleLead.name : '<span class="text-slate-400 font-normal">טרם מונה</span>'}</span>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-amber-900 font-bold text-[11px]">⭐ אחראי עמדה קבוע (גבר בלבד):</span>
                   ${maleLead && maleLead.phone ? `<span class="text-slate-500 font-mono text-[10px]" dir="ltr">${maleLead.phone}</span>` : ''}
                 </div>
-                <div class="flex items-center justify-between border-t border-amber-200/40 pt-1">
-                  <span class="text-slate-700">👩 <strong>אחראית:</strong> ${femaleLead ? femaleLead.name : '<span class="text-slate-400 font-normal">טרם מונתה</span>'}</span>
-                  ${femaleLead && femaleLead.phone ? `<span class="text-slate-500 font-mono text-[10px]" dir="ltr">${femaleLead.phone}</span>` : ''}
-                </div>
+                <select onchange="setPermanentStandLead('${stand.id}', this.value)" class="w-full bg-white border border-amber-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-amber-400">
+                  <option value="">-- טרם מונה אחראי קבוע --</option>
+                  ${maleActivists.map(a => `<option value="${a.id}" ${maleLead && maleLead.id === a.id ? 'selected' : ''}>👨 ${a.name}</option>`).join('')}
+                </select>
               </div>
 
               <!-- Assigned Activists List -->
@@ -2044,19 +2062,13 @@
 
                 ${assigned.map(a => {
                   const isFemale = a.gender === 'female';
-                  const isLead = isFemale ? (femaleLead && femaleLead.id === a.id) : (maleLead && maleLead.id === a.id);
-                  const roleWord = isFemale ? 'אחראית' : 'אחראי';
                   return `
                     <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
                       <div class="flex items-center gap-1.5">
                         <span class="text-[11px]">${isFemale ? '👩' : '👨'}</span>
                         <span class="font-medium text-slate-800">${a.name}</span>
-                        ${isLead ? `<span class="text-[9px] ${isFemale ? 'bg-rose-200 text-rose-900' : 'bg-amber-200 text-amber-900'} font-bold px-1.5 rounded">${roleWord}</span>` : ''}
                       </div>
                       <div class="flex items-center gap-2">
-                        <button onclick="toggleStandLeadInWeek('${stand.id}', ${a.id})" class="text-[10px] ${isFemale ? 'text-rose-700' : 'text-amber-700'} hover:underline font-semibold" title="הגדר/בטל כ${roleWord} עמדה">
-                          ${isLead ? `בטל ${roleWord}` : `הפוך ל${roleWord}`}
-                        </button>
                         <button onclick="unassignActivistInWeek('${stand.id}', ${a.id})" class="text-red-500 hover:text-red-700 font-bold text-xs" title="הסר מעמדה">✕</button>
                       </div>
                     </div>
@@ -2165,6 +2177,16 @@
       }).join('');
     }
 
+    function setPermanentStandLead(standId, actIdStr) {
+      const stand = standsData.find(s => s.id === standId);
+      if (!stand) return;
+      stand.permanentLeadId = actIdStr ? parseInt(actIdStr) : null;
+      renderStandsRoster();
+      renderActivistsAccordion();
+      updateMapMarkers();
+      syncStateToServer();
+    }
+
     function assignActivistFromModal(actId) {
       const standId = document.getElementById('assign-modal-stand-id').value;
       const currentRoster = getCurrentWeekRoster();
@@ -2174,11 +2196,6 @@
 
       if (!sData.assignedIds.includes(picked.id)) {
         sData.assignedIds.push(picked.id);
-      }
-      if (picked.gender === 'female') {
-        if (!sData.leadFemaleId) sData.leadFemaleId = picked.id;
-      } else {
-        if (!sData.leadMaleId) sData.leadMaleId = picked.id;
       }
 
       renderAssignModalList();
@@ -2240,11 +2257,10 @@
 
       standsData.forEach(stand => {
         const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
-        const { maleLead, femaleLead } = getStandLeads(sData);
+        const { maleLead } = getStandLeads(stand, sData);
         const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
         lines.push(`📍 *${stand.name}* ${stand.hours ? '(' + stand.hours + ')' : ''}:`);
         lines.push(`   👨 אחראי עמדה: ${maleLead ? maleLead.name + (maleLead.phone ? ' (' + maleLead.phone + ')' : '') : 'טרם שובץ'}`);
-        lines.push(`   👩 אחראית עמדה: ${femaleLead ? femaleLead.name + (femaleLead.phone ? ' (' + femaleLead.phone + ')' : '') : 'טרם שובצה'}`);
         lines.push(`   👥 צוות: ${assigned.length > 0 ? assigned.map(a => a.name).join(', ') : 'ללא שיבוץ'}`);
         if (sData.note) lines.push(`   📝 דגשים: ${sData.note}`);
         lines.push('');
