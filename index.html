@@ -363,18 +363,18 @@
         <div class="flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-800/90 p-3 rounded-xl border border-slate-700">
           
           <!-- Prev / Next Week Buttons -->
-          <div class="flex items-center gap-2">
-            <button onclick="navigateWeek(-1)" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1">
+          <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto min-w-0">
+            <button onclick="navigateWeek(-1)" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 shrink-0">
               <span>◀</span>
               <span>שבוע קודם</span>
             </button>
 
             <!-- Weeks Dropdown Selector -->
-            <select id="select-week-navigator" onchange="onWeekDropdownChanged()" class="bg-slate-900 border border-slate-600 text-amber-400 font-bold px-3 py-1.5 rounded-lg outline-none">
+            <select id="select-week-navigator" onchange="onWeekDropdownChanged()" class="bg-slate-900 border border-slate-600 text-amber-400 font-bold px-2.5 py-1.5 rounded-lg outline-none flex-1 min-w-0 max-w-full truncate">
               <!-- Rendered via JS: 16 weeks spanning 2 months back & forward -->
             </select>
 
-            <button onclick="navigateWeek(1)" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1">
+            <button onclick="navigateWeek(1)" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 shrink-0">
               <span>שבוע הבא</span>
               <span>▶</span>
             </button>
