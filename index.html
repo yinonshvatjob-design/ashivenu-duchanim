@@ -1519,7 +1519,7 @@
                       <div class="flex items-start justify-between gap-2 bg-slate-50/90 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs">
                         <div class="text-slate-800 leading-snug break-words flex-1">${escapeHtml(entry.text)}</div>
                         <div class="flex items-center gap-1.5 shrink-0 text-[10px] text-slate-400">
-                          ${entry.timestamp ? `<span class="font-mono bg-white border border-slate-200/80 px-1.5 py-0.5 rounded text-slate-500" dir="ltr">${escapeHtml(entry.timestamp)}</span>` : ''}
+                          <span class="font-mono bg-amber-50/80 border border-amber-200/80 px-1.5 py-0.5 rounded text-amber-900 font-semibold" dir="ltr">🕒 ${escapeHtml(entry.timestamp || 'הערה קודמת')}</span>
                           ${entry.author ? `<span class="hidden sm:inline text-slate-400">(${escapeHtml(entry.author)})</span>` : ''}
                           <button onclick="deleteActivistNoteEntry(${act.id}, '${entry.id}')" class="text-slate-300 hover:text-red-500 font-bold px-0.5" title="מחק שורה">✕</button>
                         </div>
@@ -1553,12 +1553,15 @@
         act.notesLog = [];
         return act.notesLog;
       }
-      act.notesLog = raw.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map((line, i) => ({
-        id: 'n-legacy-' + (act.id || 0) + '-' + i,
-        text: line,
-        timestamp: '',
-        author: ''
-      }));
+      act.notesLog = raw.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map((line, i) => {
+        const m = line.match(/^\[(\d{2}\/\d{2}\s+\d{2}:\d{2})\]\s*(.*)$/);
+        return {
+          id: 'n-legacy-' + (act.id || 0) + '-' + i,
+          text: m ? m[2] : line,
+          timestamp: m ? m[1] : 'הערה קודמת',
+          author: ''
+        };
+      });
       return act.notesLog;
     }
 
@@ -1603,7 +1606,7 @@
         <div class="flex items-start justify-between gap-2 bg-white border border-slate-200/80 rounded-lg px-2.5 py-1.5 text-xs">
           <div class="text-slate-800 leading-snug break-words flex-1">${escapeHtml(entry.text)}</div>
           <div class="flex items-center gap-1.5 shrink-0 text-[10px] text-slate-400">
-            ${entry.timestamp ? `<span class="font-mono bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500" dir="ltr">${escapeHtml(entry.timestamp)}</span>` : ''}
+            <span class="font-mono bg-amber-50/80 border border-amber-200/80 px-1.5 py-0.5 rounded text-amber-900 font-semibold" dir="ltr">🕒 ${escapeHtml(entry.timestamp || 'הערה קודמת')}</span>
             ${entry.author ? `<span>(${escapeHtml(entry.author)})</span>` : ''}
             <button type="button" onclick="deleteActivistNoteEntry(${act.id}, '${entry.id}', true)" class="text-slate-300 hover:text-red-500 font-bold px-0.5" title="מחק שורה">✕</button>
           </div>
@@ -1737,8 +1740,15 @@
         status,
         smsVerified: false,
         preferredStand: '',
-        notes
+        notes,
+        notesLog: notes ? [{
+          id: 'n-' + Date.now(),
+          text: notes,
+          timestamp: formatNoteTimestamp(),
+          author: currentUser ? (currentUser.fullName || currentUser.username) : ''
+        }] : []
       };
+      if (newAct.notesLog.length > 0) syncActivistNotesString(newAct);
 
       activistsData.unshift(newAct);
       openAccordionIds.add(newAct.id);
