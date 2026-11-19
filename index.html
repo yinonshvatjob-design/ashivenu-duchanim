@@ -2202,7 +2202,13 @@
                     <h3 class="font-bold text-base text-slate-900">${stand.name}</h3>
                     <button onclick="openEditStandModal('${stand.id}')" class="text-slate-400 hover:text-amber-600 text-xs px-1" title="ערוך פרטי עמדה ומיקום במפה">✏️</button>
                   </div>
-                  <div class="text-xs text-slate-400">${stand.address || stand.city || ''} ${stand.hours ? '• ' + stand.hours : ''}</div>
+                  <div class="text-xs text-slate-400 flex flex-wrap items-center gap-1.5 mt-0.5">
+                    <span>${stand.address || stand.city || ''}</span>
+                    <span class="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5 text-[11px] text-slate-700">
+                      <span>⏰</span>
+                      <input type="text" value="${escapeHtml(stand.hours || '')}" onchange="updateStandHoursInline('${stand.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}" placeholder="שעת פעילות..." class="bg-transparent outline-none w-24 text-[11px] font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-normal" dir="ltr" title="ערוך שעת פעילות">
+                    </span>
+                  </div>
                 </div>
 
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
@@ -2377,6 +2383,14 @@
       stand.permanentLeadId = actIdStr ? parseInt(actIdStr) : null;
       renderStandsRoster();
       renderActivistsAccordion();
+      updateMapMarkers();
+      syncStateToServer();
+    }
+
+    function updateStandHoursInline(standId, hoursVal) {
+      const stand = standsData.find(s => s.id === standId);
+      if (!stand) return;
+      stand.hours = (hoursVal || '').trim();
       updateMapMarkers();
       syncStateToServer();
     }
