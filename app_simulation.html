@@ -2120,10 +2120,12 @@
       const weekId = weeksList[currentWeekIndex].id;
       if (!weeklyRosters[weekId]) {
         weeklyRosters[weekId] = {};
-        standsData.forEach(stand => {
-          weeklyRosters[weekId][stand.id] = { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: 'ממתין לשיבוץ' };
-        });
       }
+      standsData.forEach(stand => {
+        if (!weeklyRosters[weekId][stand.id]) {
+          weeklyRosters[weekId][stand.id] = { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '', noteLog: [] };
+        }
+      });
       return weeklyRosters[weekId];
     }
 
