@@ -1484,11 +1484,12 @@
                   <div class="bg-white p-3 rounded-xl border border-slate-200/60 flex items-center justify-between">
                     <div>
                       <span class="text-[10px] font-bold text-slate-400">יצירת קשר ישירה:</span>
-                      <div class="font-semibold text-slate-700 mt-0.5">חיוג או וואטסאפ</div>
+                      <div class="font-semibold text-slate-700 mt-0.5">חיוג, סמס או וואטסאפ</div>
                     </div>
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex flex-wrap items-center gap-1.5">
                       ${act.phone ? `
                         <a href="tel:${act.phone}" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700" title="חיוג">📞 שיחה</a>
+                        <a href="sms:${act.phone}" class="p-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-700 font-bold" title="שליחת סמס">✉️ סמס</a>
                         <a href="https://wa.me/972${act.phone.replace(/[^0-9]/g, '').slice(1)}" target="_blank" class="p-2 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-700 font-bold" title="וואטסאפ">💬 ווטסאפ</a>
                       ` : '<span class="text-[10px] text-slate-400">חסר טלפון</span>'}
                     </div>
@@ -2573,10 +2574,13 @@
                   </div>
                 </div>
 
-                <!-- Direct Call & WhatsApp Buttons -->
+                <!-- Direct Call, SMS & WhatsApp Buttons -->
                 <div class="flex items-center gap-1.5" dir="ltr">
                   <a href="tel:${lead.phone}" class="w-7 h-7 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center justify-center text-xs hover:bg-emerald-100 transition" title="חייג ${lead.phone}">
                     📞
+                  </a>
+                  <a href="sms:${lead.phone}" class="w-7 h-7 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg flex items-center justify-center text-xs hover:bg-blue-100 transition" title="שלח סמס ל-${lead.phone}">
+                    ✉️
                   </a>
                   <a href="https://wa.me/972${cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone}" target="_blank" class="w-7 h-7 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center justify-center text-xs hover:bg-emerald-100 transition" title="וואטסאפ">
                     💬
