@@ -3563,6 +3563,11 @@
       renderLeads();
       renderAdminUsers();
       renderFloatingTasks();
+
+      if (window.innerWidth < 768) {
+        standsViewMode = 'dashboard';
+        switchPage('stands');
+      }
     });
 
     // --- 10B. PDF EXPORTS (THURSDAY ONE-PAGER & ACTIVISTS DIRECTORIES) ---
