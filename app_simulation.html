@@ -732,8 +732,12 @@
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">הערות סטטוס מתחלפות (עדכון שוטף של הרכז)</label>
-          <textarea id="edit-act-notes" rows="3" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-amber-500 font-normal leading-relaxed"></textarea>
+          <label class="block font-bold text-slate-700 mb-1.5">הערות סטטוס ומעקב תהליך (עם תאריך ושעה אוטומטית)</label>
+          <div class="flex items-center gap-1.5 mb-2">
+            <input id="modal-new-note-input" type="text" onkeydown="if(event.key==='Enter'){event.preventDefault();addNoteFromEditModal();}" placeholder="כתוב עדכון חדש (למשל: לא ענה - נשלח סמס)..." class="flex-1 p-2 border border-amber-300 bg-amber-50/40 rounded-xl text-xs outline-none focus:border-amber-500 focus:bg-white">
+            <button type="button" onclick="addNoteFromEditModal()" class="px-3 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs shrink-0 transition">+ הוסף</button>
+          </div>
+          <div id="modal-act-notes-log" class="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar p-2 bg-slate-50 border border-slate-200 rounded-xl"></div>
         </div>
 
       </div>
@@ -1497,16 +1501,31 @@
 
                 </div>
 
-                <!-- Live Shift Notes (Editable by Coordinator) -->
-                <div class="bg-white p-3 rounded-xl border border-slate-200/80">
-                  <div class="flex items-center justify-between text-[11px] font-bold text-slate-600 mb-1">
-                    <span>📝 הערת סטטוס מתחלפת (מעודכנת ע"י הרכז):</span>
+                <!-- Live Shift Notes Log (Timestamped by Coordinator) -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200/80 space-y-2">
+                  <div class="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                    <span>📝 יומן סטטוס ומעקב תהליך:</span>
                     <button onclick="openEditActivistModal(${act.id})" class="text-amber-600 hover:underline font-bold text-xs flex items-center gap-1">
                       <span>ערוך את כל פרטי הפעיל</span>
                       <span>✏️</span>
                     </button>
                   </div>
-                  <p class="text-slate-800 text-xs font-normal leading-relaxed">${act.notes || 'אין הערות כרגע'}</p>
+                  <div class="flex items-center gap-1.5">
+                    <input id="quick-note-input-${act.id}" type="text" onkeydown="if(event.key==='Enter'){addQuickActivistNote(${act.id});}" placeholder="+ הוסף עדכון מעקב מהיר..." class="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-amber-500 bg-slate-50 focus:bg-white">
+                    <button onclick="addQuickActivistNote(${act.id})" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-[11px] shrink-0 transition">הוסף</button>
+                  </div>
+                  <div class="space-y-1">
+                    ${ensureActivistNotesLog(act).map(entry => `
+                      <div class="flex items-start justify-between gap-2 bg-slate-50/90 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs">
+                        <div class="text-slate-800 leading-snug break-words flex-1">${escapeHtml(entry.text)}</div>
+                        <div class="flex items-center gap-1.5 shrink-0 text-[10px] text-slate-400">
+                          ${entry.timestamp ? `<span class="font-mono bg-white border border-slate-200/80 px-1.5 py-0.5 rounded text-slate-500" dir="ltr">${escapeHtml(entry.timestamp)}</span>` : ''}
+                          ${entry.author ? `<span class="hidden sm:inline text-slate-400">(${escapeHtml(entry.author)})</span>` : ''}
+                          <button onclick="deleteActivistNoteEntry(${act.id}, '${entry.id}')" class="text-slate-300 hover:text-red-500 font-bold px-0.5" title="מחק שורה">✕</button>
+                        </div>
+                      </div>
+                    `).join('') || '<div class="text-xs text-slate-400 italic">אין הערות מעקב כרגע</div>'}
+                  </div>
                 </div>
 
               </div>
@@ -1515,6 +1534,99 @@
           </div>
         `;
       }).join('');
+    }
+
+    // --- Timestamped Activist Status Notes Helpers ---
+    function formatNoteTimestamp(dateObj = new Date()) {
+      const dd = String(dateObj.getDate()).padStart(2, '0');
+      const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const hh = String(dateObj.getHours()).padStart(2, '0');
+      const min = String(dateObj.getMinutes()).padStart(2, '0');
+      return `${dd}/${mm} ${hh}:${min}`;
+    }
+
+    function ensureActivistNotesLog(act) {
+      if (!act) return [];
+      if (Array.isArray(act.notesLog)) return act.notesLog;
+      const raw = (act.notes || '').trim();
+      if (!raw) {
+        act.notesLog = [];
+        return act.notesLog;
+      }
+      act.notesLog = raw.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map((line, i) => ({
+        id: 'n-legacy-' + (act.id || 0) + '-' + i,
+        text: line,
+        timestamp: '',
+        author: ''
+      }));
+      return act.notesLog;
+    }
+
+    function syncActivistNotesString(act) {
+      const log = ensureActivistNotesLog(act);
+      act.notes = log.map(e => (e.timestamp ? `[${e.timestamp}] ` : '') + e.text).join('\n');
+    }
+
+    function addQuickActivistNote(actId) {
+      const act = activistsData.find(a => a.id === actId);
+      const inp = document.getElementById(`quick-note-input-${actId}`);
+      const text = inp ? inp.value.trim() : '';
+      if (!act || !text) return;
+      const log = ensureActivistNotesLog(act);
+      log.unshift({
+        id: 'n-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+        text,
+        timestamp: formatNoteTimestamp(),
+        author: currentUser ? (currentUser.fullName || currentUser.username) : ''
+      });
+      syncActivistNotesString(act);
+      if (inp) inp.value = '';
+      renderActivistsAccordion();
+      syncStateToServer();
+    }
+
+    function deleteActivistNoteEntry(actId, noteId, fromModal = false) {
+      const act = activistsData.find(a => a.id === actId);
+      if (!act) return;
+      act.notesLog = ensureActivistNotesLog(act).filter(e => e.id !== noteId);
+      syncActivistNotesString(act);
+      if (fromModal) renderModalActivistNotesLog(act);
+      renderActivistsAccordion();
+      syncStateToServer();
+    }
+
+    function renderModalActivistNotesLog(act) {
+      const box = document.getElementById('modal-act-notes-log');
+      if (!box) return;
+      const log = ensureActivistNotesLog(act);
+      box.innerHTML = log.map(entry => `
+        <div class="flex items-start justify-between gap-2 bg-white border border-slate-200/80 rounded-lg px-2.5 py-1.5 text-xs">
+          <div class="text-slate-800 leading-snug break-words flex-1">${escapeHtml(entry.text)}</div>
+          <div class="flex items-center gap-1.5 shrink-0 text-[10px] text-slate-400">
+            ${entry.timestamp ? `<span class="font-mono bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500" dir="ltr">${escapeHtml(entry.timestamp)}</span>` : ''}
+            ${entry.author ? `<span>(${escapeHtml(entry.author)})</span>` : ''}
+            <button type="button" onclick="deleteActivistNoteEntry(${act.id}, '${entry.id}', true)" class="text-slate-300 hover:text-red-500 font-bold px-0.5" title="מחק שורה">✕</button>
+          </div>
+        </div>
+      `).join('') || '<div class="text-xs text-slate-400 text-center py-2 italic">אין הערות מעקב עדיין — הוסף עדכון למעלה</div>';
+    }
+
+    function addNoteFromEditModal() {
+      const id = parseInt(document.getElementById('edit-act-id').value);
+      const act = activistsData.find(a => a.id === id);
+      const inp = document.getElementById('modal-new-note-input');
+      const text = inp ? inp.value.trim() : '';
+      if (!act || !text) return;
+      const log = ensureActivistNotesLog(act);
+      log.unshift({
+        id: 'n-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+        text,
+        timestamp: formatNoteTimestamp(),
+        author: currentUser ? (currentUser.fullName || currentUser.username) : ''
+      });
+      syncActivistNotesString(act);
+      if (inp) inp.value = '';
+      renderModalActivistNotesLog(act);
     }
 
     // Modal: Full Edit for Activist
@@ -1531,7 +1643,9 @@
       document.getElementById('edit-act-sms').value = act.smsVerified ? 'true' : 'false';
       document.getElementById('edit-act-status').value = act.status;
       document.getElementById('edit-act-preferred-stand').value = act.preferredStand || '';
-      document.getElementById('edit-act-notes').value = act.notes || '';
+      const newNoteInp = document.getElementById('modal-new-note-input');
+      if (newNoteInp) newNoteInp.value = '';
+      renderModalActivistNotesLog(act);
       document.getElementById('modal-edit-act-subtitle').innerText = `עריכת פרטי פעיל/ה: ${act.name}`;
 
       document.getElementById('modal-edit-activist').classList.remove('hidden');
@@ -1554,7 +1668,20 @@
       act.smsVerified = document.getElementById('edit-act-sms').value === 'true';
       act.status = document.getElementById('edit-act-status').value;
       act.preferredStand = document.getElementById('edit-act-preferred-stand').value;
-      act.notes = document.getElementById('edit-act-notes').value.trim();
+
+      // If user typed a new note in the input and clicked Save directly, append it with timestamp
+      const pendingNoteInp = document.getElementById('modal-new-note-input');
+      if (pendingNoteInp && pendingNoteInp.value.trim()) {
+        const log = ensureActivistNotesLog(act);
+        log.unshift({
+          id: 'n-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+          text: pendingNoteInp.value.trim(),
+          timestamp: formatNoteTimestamp(),
+          author: currentUser ? (currentUser.fullName || currentUser.username) : ''
+        });
+        pendingNoteInp.value = '';
+      }
+      syncActivistNotesString(act);
 
       closeEditActivistModal();
       renderActivistsAccordion();
