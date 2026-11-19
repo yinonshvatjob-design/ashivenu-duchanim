@@ -382,6 +382,22 @@
 
       </div>
 
+      <!-- Mobile & Quick Dashboard Switcher + Filter Toolbar -->
+      <div id="stands-view-toolbar" class="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+          <button id="stands-mode-dashboard" onclick="setStandsViewMode('dashboard')" class="px-3 py-1.5 rounded-lg font-bold transition">📱 תמונת מצב</button>
+          <button id="stands-mode-cards" onclick="setStandsViewMode('cards')" class="px-3 py-1.5 rounded-lg font-bold transition">📋 כרטיסי עריכה</button>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button id="dash-filter-all" onclick="setStandsDashFilter('all')" class="px-2.5 py-1 rounded-lg font-bold border transition">הכל</button>
+          <button id="dash-filter-missing" onclick="setStandsDashFilter('missing')" class="px-2.5 py-1 rounded-lg font-bold border transition">🔴 חסרים פעילים</button>
+          <button id="dash-filter-noanswer" onclick="setStandsDashFilter('no_answer')" class="px-2.5 py-1 rounded-lg font-bold border transition">✕ לא ענו</button>
+        </div>
+      </div>
+
+      <!-- Compact Mobile-First Status Dashboard View -->
+      <div id="stands-dashboard-view" class="hidden space-y-3"></div>
+
       <!-- Live Stands Cards Grid -->
       <div id="stands-roster-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <!-- Rendered dynamically via JavaScript -->
@@ -2184,7 +2200,17 @@
       const currentRoster = getCurrentWeekRoster();
       const maleActivists = activistsData.filter(a => (a.gender || 'male') === 'male');
 
-      grid.innerHTML = standsData.map(stand => {
+      renderStandsDashboard(currentRoster);
+
+      const filteredStandsForCards = standsData.filter(stand => {
+        const sData = currentRoster[stand.id] || { assignedIds: [] };
+        const assignedCount = (sData.assignedIds || []).length;
+        if (standsDashFilter === 'missing') return assignedCount < (stand.requiredActivists || 2);
+        if (standsDashFilter === 'no_answer') return sData.leadContactStatus === 'no_answer';
+        return true;
+      });
+
+      grid.innerHTML = filteredStandsForCards.map(stand => {
         const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
         const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
         const { maleLead } = getStandLeads(stand, sData);
@@ -2374,6 +2400,189 @@
           </div>
         `;
       }).join('');
+    }
+
+    let standsViewMode = window.innerWidth < 768 ? 'dashboard' : 'cards';
+    let standsDashFilter = 'all'; // 'all' | 'missing' | 'no_answer'
+
+    function setStandsViewMode(mode) {
+      standsViewMode = mode;
+      renderStandsRoster();
+    }
+
+    function setStandsDashFilter(filter) {
+      standsDashFilter = filter;
+      renderStandsRoster();
+    }
+
+    function openStandCardFromDashboard(standId) {
+      standsViewMode = 'cards';
+      standsDashFilter = 'all';
+      renderStandsRoster();
+      setTimeout(() => {
+        const card = document.getElementById(`stand-card-${standId}`);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.classList.add('ring-4', 'ring-amber-400');
+          setTimeout(() => card.classList.remove('ring-4', 'ring-amber-400'), 1800);
+        }
+      }, 100);
+    }
+
+    function renderStandsDashboard(currentRoster) {
+      const dashEl = document.getElementById('stands-dashboard-view');
+      const gridEl = document.getElementById('stands-roster-grid');
+      const btnDash = document.getElementById('stands-mode-dashboard');
+      const btnCards = document.getElementById('stands-mode-cards');
+      if (!dashEl || !gridEl) return;
+
+      if (btnDash && btnCards) {
+        btnDash.className = standsViewMode === 'dashboard'
+          ? 'px-3 py-1.5 rounded-lg font-bold bg-slate-900 text-white shadow-xs transition'
+          : 'px-3 py-1.5 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition';
+        btnCards.className = standsViewMode === 'cards'
+          ? 'px-3 py-1.5 rounded-lg font-bold bg-slate-900 text-white shadow-xs transition'
+          : 'px-3 py-1.5 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition';
+      }
+
+      const filterMap = [
+        ['dash-filter-all', 'all', 'bg-slate-900 text-white border-slate-900', 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'],
+        ['dash-filter-missing', 'missing', 'bg-red-600 text-white border-red-600', 'bg-white text-red-700 border-red-200 hover:bg-red-50'],
+        ['dash-filter-noanswer', 'no_answer', 'bg-amber-600 text-white border-amber-600', 'bg-white text-amber-800 border-amber-200 hover:bg-amber-50']
+      ];
+      filterMap.forEach(([id, key, activeCls, idleCls]) => {
+        const b = document.getElementById(id);
+        if (b) b.className = `px-2.5 py-1 rounded-lg font-bold border transition ${standsDashFilter === key ? activeCls : idleCls}`;
+      });
+
+      dashEl.classList.toggle('hidden', standsViewMode !== 'dashboard');
+      gridEl.classList.toggle('hidden', standsViewMode === 'dashboard');
+      if (standsViewMode !== 'dashboard') return;
+
+      let fullCount = 0;
+      let totalAssigned = 0;
+      let answeredCount = 0;
+      let noAnswerOrPendingCount = 0;
+
+      const parseMins = (hStr) => {
+        const m = String(hStr || '').match(/(\d{1,2}):(\d{2})/);
+        if (!m) return 99999;
+        let h = parseInt(m[1], 10);
+        const min = parseInt(m[2], 10);
+        if (h < 6) h += 24;
+        return h * 60 + min;
+      };
+
+      const rowsData = standsData.map(stand => {
+        const sData = currentRoster[stand.id] || { assignedIds: [], note: '' };
+        const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
+        const req = stand.requiredActivists || 2;
+        const { maleLead } = getStandLeads(stand, sData);
+        const isFull = assigned.length >= req;
+        if (isFull) fullCount++;
+        totalAssigned += assigned.length;
+        if (sData.leadContactStatus === 'answered') answeredCount++;
+        else noAnswerOrPendingCount++;
+        return { stand, sData, assigned, req, maleLead, isFull };
+      });
+
+      const sorted = rowsData
+        .filter(r => {
+          if (standsDashFilter === 'missing') return !r.isFull;
+          if (standsDashFilter === 'no_answer') return r.sData.leadContactStatus === 'no_answer';
+          return true;
+        })
+        .sort((a, b) => {
+          const aNo = a.sData.leadContactStatus === 'no_answer' ? 1 : 0;
+          const bNo = b.sData.leadContactStatus === 'no_answer' ? 1 : 0;
+          if (aNo !== bNo) return aNo - bNo;
+          return parseMins(a.stand.hours) - parseMins(b.stand.hours);
+        });
+
+      const kpiHtml = `
+        <div class="grid grid-cols-4 gap-2 text-center">
+          <div class="bg-white rounded-xl border border-slate-200 p-2 shadow-2xs">
+            <div class="text-base font-black text-emerald-700">${fullCount}/${standsData.length}</div>
+            <div class="text-[10px] font-bold text-slate-500">מאוישות</div>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 p-2 shadow-2xs">
+            <div class="text-base font-black text-slate-900">${totalAssigned}</div>
+            <div class="text-[10px] font-bold text-slate-500">משובצים</div>
+          </div>
+          <div class="bg-white rounded-xl border border-emerald-200 p-2 shadow-2xs">
+            <div class="text-base font-black text-emerald-600">${answeredCount}</div>
+            <div class="text-[10px] font-bold text-emerald-700">✓ ענו</div>
+          </div>
+          <div class="bg-white rounded-xl border border-red-200 p-2 shadow-2xs">
+            <div class="text-base font-black text-red-600">${noAnswerOrPendingCount}</div>
+            <div class="text-[10px] font-bold text-red-700">ממתין/לא ענה</div>
+          </div>
+        </div>
+      `;
+
+      const listHtml = sorted.map(({ stand, sData, assigned, req, maleLead, isFull }) => {
+        const isNoAnswer = sData.leadContactStatus === 'no_answer';
+        const isAnswered = sData.leadContactStatus === 'answered';
+        const statusCls = isFull
+          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+          : assigned.length > 0
+            ? 'bg-amber-100 text-amber-900 border-amber-200'
+            : 'bg-red-100 text-red-800 border-red-200';
+        const realNotes = ensureStandNotesLog(sData)
+          .filter(e => e.text && !e.text.includes('הועתק כברירת מחדל משבוע שעבר'));
+        const cleanPhone = maleLead && maleLead.phone ? maleLead.phone.replace(/[^0-9]/g, '') : '';
+
+        return `
+          <div class="bg-white rounded-xl border ${isNoAnswer ? 'border-red-300 border-r-4 border-r-red-600' : isFull ? 'border-slate-200 border-r-4 border-r-emerald-500' : 'border-slate-200 border-r-4 border-r-amber-400'} p-2.5 shadow-2xs space-y-1.5">
+            <!-- Row 1: Time + Name + Staffing Badge -->
+            <div class="flex items-center justify-between gap-2">
+              <div onclick="openStandCardFromDashboard('${stand.id}')" class="flex items-center gap-1.5 min-w-0 cursor-pointer">
+                <span class="text-[11px] font-mono font-extrabold bg-slate-900 text-amber-400 px-1.5 py-0.5 rounded shrink-0" dir="ltr">${escapeHtml((stand.hours || '--:--').split('-')[0].trim())}</span>
+                <span class="font-extrabold text-sm text-slate-900 truncate">${escapeHtml(stand.name)}</span>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${statusCls}">
+                  ${isFull ? `${assigned.length}/${req} ✓` : `${assigned.length}/${req}`}
+                </span>
+                <button onclick="openAssignModal('${stand.id}', '${escapeHtml(stand.name)}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-[10px] px-2 py-0.5 rounded-lg">+ שבץ</button>
+              </div>
+            </div>
+
+            <!-- Row 2: Lead + Quick Contact + Answer Toggle -->
+            <div class="flex flex-wrap items-center justify-between gap-1.5 text-[11px] pt-1 border-t border-slate-100">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="text-slate-600 truncate">⭐ <strong>${maleLead ? escapeHtml(maleLead.name) : 'ללא אחראי'}</strong></span>
+                ${maleLead && maleLead.phone ? `
+                  <a href="tel:${maleLead.phone}" class="bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded text-[10px]" title="חייג">📞</a>
+                  <a href="https://wa.me/972${cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone}" target="_blank" class="bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded text-[10px]" title="וואטסאפ">💬</a>
+                ` : ''}
+              </div>
+              ${maleLead ? `
+                <div class="flex items-center gap-1 shrink-0">
+                  <button onclick="setStandLeadContactStatus('${stand.id}', 'answered')" class="px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${isAnswered ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white text-slate-500 border-slate-200'}">✓ ענה</button>
+                  <button onclick="setStandLeadContactStatus('${stand.id}', 'no_answer')" class="px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${isNoAnswer ? 'bg-red-600 text-white border-red-700' : 'bg-white text-slate-500 border-slate-200'}">✕ לא ענה</button>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Row 3: Assigned names summary (compact) -->
+            ${assigned.length > 0 ? `
+              <div class="text-[10.5px] text-slate-600 leading-snug">
+                👥 ${assigned.map(a => escapeHtml(a.name)).join(' • ')}
+              </div>
+            ` : ''}
+
+            <!-- Row 4: Live note highlight if present -->
+            ${realNotes.length > 0 ? `
+              <div class="bg-yellow-200/80 border border-amber-400 rounded-lg px-2 py-1 text-[10.5px] font-bold text-orange-950">
+                🚨 ${escapeHtml(realNotes[0].text)}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('') || '<div class="bg-white rounded-xl border border-slate-200 p-6 text-center text-xs text-slate-400">אין עמדות תואמות לסינון</div>';
+
+      dashEl.innerHTML = kpiHtml + `<div class="space-y-2">${listHtml}</div>`;
     }
 
     function setPermanentStandLead(standId, actIdStr) {
