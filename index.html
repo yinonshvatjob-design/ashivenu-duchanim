@@ -2255,24 +2255,24 @@
                 }).join('') || '<div class="text-xs text-slate-400 italic p-2 bg-slate-50 rounded-lg">אין פעילים משובצים לעמדה זו בשבוע הנבחר</div>'}
               </div>
 
-              <!-- Live Evening Status Notes Log (Timestamped) -->
-              <div class="mt-3.5 bg-slate-50 rounded-xl p-2.5 border border-slate-200/60 text-xs space-y-2">
-                <div class="flex items-center justify-between text-[10px] text-slate-400">
-                  <span class="font-bold text-slate-600">הערות סטטוס שבועיות (הרכז מעדכן בלייב):</span>
-                  <button onclick="editStandStatusInWeek('${stand.id}')" class="text-amber-600 hover:underline font-semibold">+ עדכון ✏️</button>
+              <!-- Live Evening Status Notes Log (Timestamped & High-Visibility Highlight) -->
+              <div class="mt-3.5 ${ensureStandNotesLog(sData).length > 0 ? 'bg-gradient-to-l from-yellow-200 via-amber-100 to-orange-100 border-2 border-amber-400 shadow-sm' : 'bg-slate-50 border border-slate-200/60'} rounded-xl p-2.5 text-xs space-y-2">
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="font-extrabold ${ensureStandNotesLog(sData).length > 0 ? 'text-orange-950' : 'text-slate-600'}">🚨 הערות סטטוס שבועיות (הרכז מעדכן בלייב):</span>
+                  <button onclick="editStandStatusInWeek('${stand.id}')" class="text-orange-800 hover:underline font-extrabold">+ עדכון ✏️</button>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <input id="stand-note-input-${stand.id}" type="text" onkeydown="if(event.key==='Enter'){addQuickStandStatusNote('${stand.id}');}" placeholder="+ הוסף עדכון בלייב..." class="flex-1 px-2 py-1 border border-slate-200 rounded-lg text-[11px] outline-none focus:border-amber-500 bg-white">
+                  <input id="stand-note-input-${stand.id}" type="text" onkeydown="if(event.key==='Enter'){addQuickStandStatusNote('${stand.id}');}" placeholder="+ הוסף עדכון בלייב..." class="flex-1 px-2 py-1 border border-amber-300 rounded-lg text-[11px] outline-none focus:border-orange-500 bg-white/95">
                   <button onclick="addQuickStandStatusNote('${stand.id}')" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-[10px] shrink-0 transition">הוסף</button>
                 </div>
-                <div class="space-y-1">
+                <div class="space-y-1.5">
                   ${ensureStandNotesLog(sData).map(entry => `
-                    <div class="flex items-start justify-between gap-2 bg-white border border-slate-200/70 rounded-lg px-2 py-1 text-[11px]">
-                      <div class="text-slate-800 leading-snug break-words flex-1">${escapeHtml(entry.text)}</div>
-                      <div class="flex items-center gap-1 shrink-0 text-[9.5px] text-slate-400">
-                        <span class="font-mono bg-amber-50/80 border border-amber-200/80 px-1 py-0.5 rounded text-amber-900 font-semibold" dir="ltr">🕒 ${escapeHtml(entry.timestamp || 'הערה קודמת')}</span>
-                        ${entry.author ? `<span class="hidden sm:inline">(${escapeHtml(entry.author)})</span>` : ''}
-                        <button onclick="deleteStandStatusNote('${stand.id}', '${entry.id}')" class="text-slate-300 hover:text-red-500 font-bold px-0.5" title="מחק שורה">✕</button>
+                    <div class="flex items-start justify-between gap-2 bg-yellow-300/75 border border-amber-400 border-r-4 border-r-orange-600 rounded-lg px-2.5 py-1.5 text-[11px] shadow-2xs">
+                      <div class="text-slate-950 font-bold leading-snug break-words flex-1">${escapeHtml(entry.text)}</div>
+                      <div class="flex items-center gap-1 shrink-0 text-[9.5px] text-orange-950">
+                        <span class="font-mono bg-white/90 border border-orange-400 px-1.5 py-0.5 rounded text-orange-950 font-bold" dir="ltr">🕒 ${escapeHtml(entry.timestamp || 'הערה קודמת')}</span>
+                        ${entry.author ? `<span class="hidden sm:inline font-semibold">(${escapeHtml(entry.author)})</span>` : ''}
+                        <button onclick="deleteStandStatusNote('${stand.id}', '${entry.id}')" class="text-orange-900/60 hover:text-red-700 font-black px-0.5" title="מחק שורה">✕</button>
                       </div>
                     </div>
                   `).join('') || '<div class="text-[11px] text-slate-400 italic">אין הערות כרגע</div>'}
