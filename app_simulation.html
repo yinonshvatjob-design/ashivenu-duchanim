@@ -2262,9 +2262,9 @@
               </div>
 
               <!-- Live Evening Status Notes Log (Timestamped & High-Visibility Highlight) -->
-              <div class="mt-3.5 ${ensureStandNotesLog(sData).length > 0 ? 'bg-gradient-to-l from-yellow-200 via-amber-100 to-orange-100 border-2 border-amber-400 shadow-sm' : 'bg-slate-50 border border-slate-200/60'} rounded-xl p-2.5 text-xs space-y-2">
+              <div class="mt-3.5 ${ensureStandNotesLog(sData).length > 0 ? 'bg-gradient-to-l from-yellow-200 via-amber-100 to-orange-100 border-2 border-amber-400 shadow-sm' : 'bg-yellow-50/90 border border-amber-300'} rounded-xl p-2.5 text-xs space-y-2">
                 <div class="flex items-center justify-between text-[10px]">
-                  <span class="font-extrabold ${ensureStandNotesLog(sData).length > 0 ? 'text-orange-950' : 'text-slate-600'}">🚨 הערות סטטוס שבועיות:</span>
+                  <span class="font-extrabold ${ensureStandNotesLog(sData).length > 0 ? 'text-orange-950' : 'text-amber-900'}">🚨 הערות סטטוס שבועיות:</span>
                 </div>
                 <div class="flex items-center gap-1.5">
                   <input id="stand-note-input-${stand.id}" type="text" onkeydown="if(event.key==='Enter'){addQuickStandStatusNote('${stand.id}');}" placeholder="+ הוסף עדכון בלייב..." class="flex-1 px-2 py-1 border border-amber-300 rounded-lg text-[11px] outline-none focus:border-orange-500 bg-white/95">
@@ -3801,6 +3801,8 @@
 
     async function refreshCloudStateSilently() {
       if (!authToken || !currentUser || window.__isSyncingState) return;
+      const activeTag = document.activeElement ? document.activeElement.tagName : '';
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
       try {
         const res = await fetch('/api/state', {
           headers: { 'Authorization': `Bearer ${authToken}` }
