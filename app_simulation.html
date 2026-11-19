@@ -2213,28 +2213,21 @@
               </div>
 
               <!-- Permanent Male Lead Box -->
-              <div class="mt-3 bg-amber-50/60 border border-amber-200/70 rounded-xl p-2.5 text-xs space-y-2">
+              <div class="mt-3 bg-amber-50/60 border border-amber-200/70 rounded-xl p-2 text-xs space-y-1.5">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="text-amber-900 font-bold text-[11px]">⭐ אחראי עמדה קבוע (גבר בלבד):</span>
-                  ${maleLead && maleLead.phone ? `<a href="tel:${maleLead.phone}" class="text-slate-600 hover:text-slate-900 font-mono text-[10px] underline decoration-amber-400" dir="ltr">${maleLead.phone}</a>` : ''}
+                  <span class="text-amber-900 font-bold text-[11px]">⭐ אחראי קבוע:</span>
+                  <div class="flex items-center gap-1.5">
+                    ${maleLead ? `
+                      <button onclick="setStandLeadContactStatus('${stand.id}', 'answered')" class="px-1.5 py-0.5 rounded text-[10px] font-bold transition border ${sData.leadContactStatus === 'answered' ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white/80 text-slate-500 border-slate-200 hover:text-emerald-700'}" title="${sData.leadContactStatus === 'answered' && sData.leadContactUpdatedAt ? 'ענה • ' + sData.leadContactUpdatedAt : 'סמן ענה'}">✓ ענה</button>
+                      <button onclick="setStandLeadContactStatus('${stand.id}', 'no_answer')" class="px-1.5 py-0.5 rounded text-[10px] font-bold transition border ${sData.leadContactStatus === 'no_answer' ? 'bg-red-600 text-white border-red-700' : 'bg-white/80 text-slate-500 border-slate-200 hover:text-red-700'}" title="${sData.leadContactStatus === 'no_answer' && sData.leadContactUpdatedAt ? 'לא ענה • ' + sData.leadContactUpdatedAt : 'סמן לא ענה'}">✕ לא ענה</button>
+                    ` : ''}
+                    ${maleLead && maleLead.phone ? `<a href="tel:${maleLead.phone}" class="text-slate-600 hover:text-slate-900 font-mono text-[10px] underline decoration-amber-400" dir="ltr">${maleLead.phone}</a>` : ''}
+                  </div>
                 </div>
                 <select onchange="setPermanentStandLead('${stand.id}', this.value)" class="w-full bg-white border border-amber-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-amber-400">
                   <option value="">-- טרם מונה אחראי קבוע --</option>
                   ${maleActivists.map(a => `<option value="${a.id}" ${maleLead && maleLead.id === a.id ? 'selected' : ''}>👨 ${a.name}</option>`).join('')}
                 </select>
-                ${maleLead ? `
-                  <div class="flex items-center justify-between gap-2 pt-1 border-t border-amber-200/50">
-                    <div class="flex items-center gap-1.5">
-                      <button onclick="setStandLeadContactStatus('${stand.id}', 'answered')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition border ${sData.leadContactStatus === 'answered' ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}">
-                        ✅ ענה
-                      </button>
-                      <button onclick="setStandLeadContactStatus('${stand.id}', 'no_answer')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition border ${sData.leadContactStatus === 'no_answer' ? 'bg-red-600 text-white border-red-700 shadow-xs' : 'bg-white text-red-700 border-red-200 hover:bg-red-50'}">
-                        📵 לא ענה
-                      </button>
-                    </div>
-                    ${sData.leadContactStatus && sData.leadContactUpdatedAt ? `<span class="text-[10px] font-mono text-amber-900/75" dir="ltr">🕒 ${escapeHtml(sData.leadContactUpdatedAt)}</span>` : '<span class="text-[10px] text-slate-400">טרם סומן השבוע</span>'}
-                  </div>
-                ` : ''}
               </div>
 
               <!-- Assigned Activists List -->
