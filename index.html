@@ -1239,6 +1239,7 @@
 
     // Multi-week Store: Clean slate (Empty by default)
     let weeklyRosters = {};
+    let tasksData = [];
 
     // Master Activists Database: Clean slate (Empty by default)
     let activistsData = [];
@@ -2834,6 +2835,7 @@
           switchPage('activists');
         }
       }
+      if (typeof renderFloatingTasks === 'function') renderFloatingTasks();
     }
 
     function renderAdminUsers() {
@@ -2990,7 +2992,8 @@
         standsData,
         weeklyRosters,
         reflectionsData,
-        leadsData
+        leadsData,
+        tasksData
       };
       try {
         localStorage.setItem('ashivenu_v2_app_data', JSON.stringify(appData));
@@ -3031,6 +3034,7 @@
             if (data.appData.weeklyRosters) weeklyRosters = data.appData.weeklyRosters;
             if (Array.isArray(data.appData.reflectionsData)) reflectionsData = data.appData.reflectionsData;
             if (Array.isArray(data.appData.leadsData)) leadsData = data.appData.leadsData;
+            if (Array.isArray(data.appData.tasksData)) tasksData = data.appData.tasksData;
           }
         }
       } catch (e) {
@@ -3044,6 +3048,7 @@
           if (parsed.weeklyRosters) weeklyRosters = parsed.weeklyRosters;
           if (Array.isArray(parsed.reflectionsData)) reflectionsData = parsed.reflectionsData;
           if (Array.isArray(parsed.leadsData)) leadsData = parsed.leadsData;
+          if (Array.isArray(parsed.tasksData)) tasksData = parsed.tasksData;
         }
       }
     }
@@ -3094,6 +3099,7 @@
       renderReflections();
       renderLeads();
       renderAdminUsers();
+      renderFloatingTasks();
     });
 
     // --- 10B. PDF EXPORTS (THURSDAY ONE-PAGER & ACTIVISTS DIRECTORIES) ---
@@ -3334,7 +3340,419 @@
         setTimeout(() => showInstallBanner(true), 1500);
       }
     });
+
+    // --- 12. FLOATING KEEP-STYLE TASKS NOTEPAD (PER-USER + SHARED + DRAG + KEEP SYNC) ---
+    let floatingTasksOpen = false;
+    let floatingTasksTab = 'mine'; // 'mine' | 'shared'
+    let newTaskPriority = 'normal'; // 'urgent' | 'high' | 'normal' | 'low'
+    let showCompletedTasks = false;
+    let draggedTaskId = null;
+    let sharePickerTaskId = null;
+
+    const TASK_PRIORITIES = {
+      urgent: { label: 'דחוף', dot: '🔴', bg: 'bg-red-50/90', border: 'border-r-red-500 border-red-200', badge: 'bg-red-100 text-red-800' },
+      high:   { label: 'חשוב', dot: '🟠', bg: 'bg-amber-50/90', border: 'border-r-amber-500 border-amber-200', badge: 'bg-amber-100 text-amber-900' },
+      normal: { label: 'רגיל', dot: '🟡', bg: 'bg-yellow-50/60', border: 'border-r-yellow-400 border-slate-200', badge: 'bg-yellow-100 text-yellow-900' },
+      low:    { label: 'נמוך', dot: '🟢', bg: 'bg-emerald-50/60', border: 'border-r-emerald-500 border-emerald-200', badge: 'bg-emerald-100 text-emerald-800' }
+    };
+    const PRIORITY_ORDER = ['urgent', 'high', 'normal', 'low'];
+
+    function toggleFloatingTasks(forceState) {
+      floatingTasksOpen = typeof forceState === 'boolean' ? forceState : !floatingTasksOpen;
+      const panel = document.getElementById('floating-tasks-panel');
+      if (panel) panel.classList.toggle('hidden', !floatingTasksOpen);
+      if (floatingTasksOpen) {
+        sharePickerTaskId = null;
+        renderFloatingTasks();
+        setTimeout(() => {
+          const inp = document.getElementById('floating-task-input');
+          if (inp && window.innerWidth > 768) inp.focus();
+        }, 120);
+      }
+    }
+
+    function setFloatingTasksTab(tab) {
+      floatingTasksTab = tab;
+      sharePickerTaskId = null;
+      renderFloatingTasks();
+    }
+
+    function setNewTaskPriority(prio) {
+      newTaskPriority = prio;
+      PRIORITY_ORDER.forEach(p => {
+        const btn = document.getElementById(`prio-pick-${p}`);
+        if (!btn) return;
+        btn.classList.toggle('ring-2', p === prio);
+        btn.classList.toggle('ring-slate-900', p === prio);
+        btn.classList.toggle('scale-110', p === prio);
+        btn.classList.toggle('opacity-55', p !== prio);
+      });
+    }
+
+    function addFloatingTask() {
+      if (!currentUser) return;
+      const inp = document.getElementById('floating-task-input');
+      const text = inp ? inp.value.trim() : '';
+      if (!text) return;
+
+      const myTasks = tasksData.filter(t => t.ownerUsername === currentUser.username);
+      const minOrder = myTasks.length > 0 ? Math.min(...myTasks.map(t => t.order || 0)) - 1 : 0;
+
+      tasksData.unshift({
+        id: 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        ownerUsername: currentUser.username,
+        ownerName: currentUser.fullName || currentUser.username,
+        text,
+        done: false,
+        priority: newTaskPriority,
+        sharedWith: floatingTasksTab === 'shared' ? ['ALL'] : [],
+        order: minOrder,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+
+      if (inp) inp.value = '';
+      renderFloatingTasks();
+      syncStateToServer();
+    }
+
+    function toggleFloatingTaskDone(taskId) {
+      const t = tasksData.find(x => x.id === taskId);
+      if (!t) return;
+      t.done = !t.done;
+      t.updatedAt = Date.now();
+      renderFloatingTasks();
+      syncStateToServer();
+    }
+
+    function cycleFloatingTaskPriority(taskId) {
+      const t = tasksData.find(x => x.id === taskId);
+      if (!t) return;
+      const idx = PRIORITY_ORDER.indexOf(t.priority || 'normal');
+      t.priority = PRIORITY_ORDER[(idx + 1) % PRIORITY_ORDER.length];
+      t.updatedAt = Date.now();
+      renderFloatingTasks();
+      syncStateToServer();
+    }
+
+    function editFloatingTaskText(taskId) {
+      const t = tasksData.find(x => x.id === taskId);
+      if (!t) return;
+      const updated = prompt('עריכת משימה:', t.text);
+      if (updated === null) return;
+      const clean = updated.trim();
+      if (!clean) return;
+      t.text = clean;
+      t.updatedAt = Date.now();
+      renderFloatingTasks();
+      syncStateToServer();
+    }
+
+    function deleteFloatingTask(taskId) {
+      tasksData = tasksData.filter(x => x.id !== taskId);
+      if (sharePickerTaskId === taskId) sharePickerTaskId = null;
+      renderFloatingTasks();
+      syncStateToServer();
+    }
+
+    function toggleTaskSharePicker(taskId) {
+      sharePickerTaskId = sharePickerTaskId === taskId ? null : taskId;
+      renderFloatingTasks();
+    }
+
+    function toggleTaskShareTarget(taskId, targetUsername) {
+      const t = tasksData.find(x => x.id === taskId);
+      if (!t) return;
+      if (!Array.isArray(t.sharedWith)) t.sharedWith = [];
+      if (targetUsername === 'NONE') {
+        t.sharedWith = [];
+      } else if (targetUsername === 'ALL') {
+        t.sharedWith = t.sharedWith.includes('ALL') ? [] : ['ALL'];
+      } else {
+        t.sharedWith = t.sharedWith.filter(u => u !== 'ALL');
+        if (t.sharedWith.includes(targetUsername)) {
+          t.sharedWith = t.sharedWith.filter(u => u !== targetUsername);
+        } else {
+          t.sharedWith.push(targetUsername);
+        }
+      }
+      t.updatedAt = Date.now();
+      renderFloatingTasks();
+      syncStateToServer();
+    }
+
+    function moveFloatingTask(taskId, delta) {
+      const visibleOpen = getVisibleFloatingTasks().filter(t => !t.done);
+      const idx = visibleOpen.findIndex(t => t.id === taskId);
+      const targetIdx = idx + delta;
+      if (idx < 0 || targetIdx < 0 || targetIdx >= visibleOpen.length) return;
+      const reordered = [...visibleOpen];
+      const [moved] = reordered.splice(idx, 1);
+      reordered.splice(targetIdx, 0, moved);
+      reordered.forEach((item, i) => { item.order = i; });
+      renderFloatingTasks();
+      syncStateToServer();
+    }
+
+    function onTaskDragStart(ev, taskId) {
+      draggedTaskId = taskId;
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', taskId);
+    }
+
+    function onTaskDragOver(ev) {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+    }
+
+    function onTaskDrop(ev, targetTaskId) {
+      ev.preventDefault();
+      const sourceId = draggedTaskId || ev.dataTransfer.getData('text/plain');
+      draggedTaskId = null;
+      if (!sourceId || sourceId === targetTaskId) return;
+      const visibleOpen = getVisibleFloatingTasks().filter(t => !t.done);
+      const fromIdx = visibleOpen.findIndex(t => t.id === sourceId);
+      const toIdx = visibleOpen.findIndex(t => t.id === targetTaskId);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const reordered = [...visibleOpen];
+      const [moved] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, moved);
+      reordered.forEach((item, i) => { item.order = i; });
+      renderFloatingTasks();
+      syncStateToServer();
+    }
+
+    function getVisibleFloatingTasks() {
+      if (!currentUser) return [];
+      const me = currentUser.username;
+      const list = tasksData.filter(t => {
+        if (floatingTasksTab === 'mine') {
+          return t.ownerUsername === me;
+        }
+        const shared = Array.isArray(t.sharedWith) ? t.sharedWith : [];
+        return t.ownerUsername !== me && (shared.includes('ALL') || shared.includes(me));
+      });
+      return list.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || (b.createdAt || 0) - (a.createdAt || 0));
+    }
+
+    async function syncYinonGoogleKeep() {
+      if (!currentUser || currentUser.username !== 'yinonshvat') return;
+      const statusEl = document.getElementById('keep-sync-status');
+      const btn = document.getElementById('keep-sync-btn');
+      if (statusEl) statusEl.innerText = 'מסנכרן מול yinon@hvn.co.il...';
+      if (btn) btn.disabled = true;
+
+      try {
+        const myTasks = tasksData.filter(t => t.ownerUsername === 'yinonshvat');
+        const res = await fetch('/api/keep-sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ tasks: myTasks })
+        });
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.tasks)) {
+          const otherTasks = tasksData.filter(t => t.ownerUsername !== 'yinonshvat');
+          tasksData = [...data.tasks, ...otherTasks];
+          renderFloatingTasks();
+          syncStateToServer();
+          if (statusEl) statusEl.innerText = `סונכרן עם Keep (${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}) ✓`;
+        } else {
+          if (statusEl) statusEl.innerText = data.needsSetup ? 'נדרש חיבור מפתח Google Keep בשרת' : (data.error || 'שגיאת סנכרון');
+          if (data.needsSetup) alert(data.error);
+        }
+      } catch (err) {
+        if (statusEl) statusEl.innerText = 'שגיאת תקשורת בסנכרון Keep';
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function renderFloatingTasks() {
+      const fab = document.getElementById('floating-tasks-fab');
+      const badge = document.getElementById('floating-tasks-badge');
+      if (!fab) return;
+
+      if (!currentUser) {
+        fab.classList.add('hidden');
+        return;
+      }
+      fab.classList.remove('hidden');
+
+      const me = currentUser.username;
+      const myOpenCount = tasksData.filter(t => t.ownerUsername === me && !t.done).length;
+      const sharedWithMeOpenCount = tasksData.filter(t => {
+        const shared = Array.isArray(t.sharedWith) ? t.sharedWith : [];
+        return t.ownerUsername !== me && !t.done && (shared.includes('ALL') || shared.includes(me));
+      }).length;
+      const totalOpen = myOpenCount + sharedWithMeOpenCount;
+
+      if (badge) {
+        badge.innerText = totalOpen;
+        badge.classList.toggle('hidden', totalOpen === 0);
+      }
+
+      const titleEl = document.getElementById('floating-tasks-title');
+      if (titleEl) titleEl.innerText = `הפנקס של ${currentUser.fullName || currentUser.username}`;
+
+      const tabMine = document.getElementById('tasks-tab-mine');
+      const tabShared = document.getElementById('tasks-tab-shared');
+      if (tabMine && tabShared) {
+        tabMine.innerHTML = `📝 הפנקס שלי <span class="text-[10px] opacity-80">(${myOpenCount})</span>`;
+        tabShared.innerHTML = `🤝 משותף איתי <span class="text-[10px] opacity-80">(${sharedWithMeOpenCount})</span>`;
+        tabMine.className = floatingTasksTab === 'mine'
+          ? 'flex-1 py-1.5 rounded-lg text-xs font-bold bg-amber-400 text-slate-950 shadow-xs transition'
+          : 'flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition';
+        tabShared.className = floatingTasksTab === 'shared'
+          ? 'flex-1 py-1.5 rounded-lg text-xs font-bold bg-amber-400 text-slate-950 shadow-xs transition'
+          : 'flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition';
+      }
+
+      const keepBar = document.getElementById('yinon-keep-sync-bar');
+      if (keepBar) {
+        keepBar.classList.toggle('hidden', me !== 'yinonshvat' || floatingTasksTab !== 'mine');
+      }
+
+      setNewTaskPriority(newTaskPriority);
+
+      const listEl = document.getElementById('floating-tasks-list');
+      if (!listEl) return;
+
+      const visible = getVisibleFloatingTasks();
+      const openTasks = visible.filter(t => !t.done);
+      const doneTasks = visible.filter(t => t.done);
+      const otherUsers = (usersData || []).filter(u => u.username !== me && u.active !== false);
+
+      const renderItem = (t, idx, isDone) => {
+        const p = TASK_PRIORITIES[t.priority] || TASK_PRIORITIES.normal;
+        const shared = Array.isArray(t.sharedWith) ? t.sharedWith : [];
+        const isShared = shared.length > 0;
+        const isOwner = t.ownerUsername === me;
+        const sharedLabel = shared.includes('ALL') ? 'משותף לכולם' : (shared.length > 0 ? `משותף (${shared.join(', ')})` : '');
+
+        return `
+          <div
+            ${!isDone ? `draggable="true" ondragstart="onTaskDragStart(event, '${t.id}')" ondragover="onTaskDragOver(event)" ondrop="onTaskDrop(event, '${t.id}')"` : ''}
+            class="rounded-xl border border-r-4 ${isDone ? 'bg-slate-50 border-slate-200 border-r-slate-300 opacity-75' : `${p.bg} ${p.border}`} p-2.5 transition shadow-2xs"
+          >
+            <div class="flex items-start gap-2">
+              ${!isDone ? `<span class="cursor-grab text-slate-400 hover:text-slate-600 select-none text-xs pt-0.5" title="גרור לשינוי סדר">⋮⋮</span>` : ''}
+              <button onclick="toggleFloatingTaskDone('${t.id}')" class="mt-0.5 text-base leading-none shrink-0" title="${isDone ? 'החזר לפתוחות' : 'סמן כבוצע'}">
+                ${isDone ? '☑️' : '⬜'}
+              </button>
+              <div class="flex-1 min-w-0">
+                <div onclick="editFloatingTaskText('${t.id}')" class="text-xs font-medium text-slate-900 break-words cursor-pointer ${isDone ? 'line-through text-slate-500' : ''}">
+                  ${escapeHtml(t.text)}
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                  ${!isDone ? `<button onclick="cycleFloatingTaskPriority('${t.id}')" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full ${p.badge}" title="לחץ להחלפת דחיפות">${p.dot} ${p.label}</button>` : ''}
+                  ${!isOwner ? `<span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded-full">מאת: ${escapeHtml(t.ownerName || t.ownerUsername)}</span>` : ''}
+                  ${isOwner && isShared ? `<span class="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-1.5 py-0.5 rounded-full">🤝 ${escapeHtml(sharedLabel)}</span>` : ''}
+                </div>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                ${!isDone ? `
+                  <button onclick="moveFloatingTask('${t.id}', -1)" class="text-slate-400 hover:text-slate-700 text-[10px] px-1" title="הזז למעלה">▲</button>
+                  <button onclick="moveFloatingTask('${t.id}', 1)" class="text-slate-400 hover:text-slate-700 text-[10px] px-1" title="הזז למטה">▼</button>
+                ` : ''}
+                ${isOwner ? `<button onclick="toggleTaskSharePicker('${t.id}')" class="${isShared ? 'text-indigo-600' : 'text-slate-400 hover:text-indigo-600'} text-xs px-1" title="שתף משימה">🤝</button>` : ''}
+                <button onclick="deleteFloatingTask('${t.id}')" class="text-slate-400 hover:text-red-600 text-xs px-1" title="מחק משימה">✕</button>
+              </div>
+            </div>
+            ${sharePickerTaskId === t.id && isOwner ? `
+              <div class="mt-2 pt-2 border-t border-slate-200/80 flex flex-wrap items-center gap-1.5 text-[10px]">
+                <span class="font-bold text-slate-600">שתף עם:</span>
+                <button onclick="toggleTaskShareTarget('${t.id}', 'NONE')" class="px-2 py-0.5 rounded-full border ${!isShared ? 'bg-slate-900 text-white border-slate-900 font-bold' : 'bg-white text-slate-600 border-slate-300'}">🔒 אישי</button>
+                <button onclick="toggleTaskShareTarget('${t.id}', 'ALL')" class="px-2 py-0.5 rounded-full border ${shared.includes('ALL') ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-600 border-slate-300'}">👥 כל הצוות</button>
+                ${otherUsers.map(u => `
+                  <button onclick="toggleTaskShareTarget('${t.id}', '${u.username}')" class="px-2 py-0.5 rounded-full border ${shared.includes(u.username) ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-white text-slate-600 border-slate-300'}">${escapeHtml(u.fullName || u.username)}</button>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      };
+
+      let html = '';
+      if (openTasks.length === 0) {
+        html += `<div class="text-center py-6 text-xs text-slate-400">${floatingTasksTab === 'mine' ? 'אין משימות פתוחות בפנקס שלך ✨' : 'אין כרגע משימות ששותפו איתך'}</div>`;
+      } else {
+        html += `<div class="space-y-2">${openTasks.map((t, i) => renderItem(t, i, false)).join('')}</div>`;
+      }
+
+      if (doneTasks.length > 0) {
+        html += `
+          <div class="mt-3 pt-2 border-t border-slate-200">
+            <button onclick="showCompletedTasks = !showCompletedTasks; renderFloatingTasks();" class="w-full flex items-center justify-between text-xs font-bold text-slate-500 hover:text-slate-800 py-1">
+              <span>✓ הושלמו (${doneTasks.length})</span>
+              <span>${showCompletedTasks ? '▲' : '▼'}</span>
+            </button>
+            ${showCompletedTasks ? `<div class="space-y-1.5 mt-1.5">${doneTasks.map((t, i) => renderItem(t, i, true)).join('')}</div>` : ''}
+          </div>
+        `;
+      }
+
+      listEl.innerHTML = html;
+    }
   </script>
+
+  <!-- Floating Keep-Style Tasks FAB Button -->
+  <button id="floating-tasks-fab" onclick="toggleFloatingTasks()" class="hidden fixed bottom-5 left-5 z-40 bg-amber-400 hover:bg-amber-300 text-slate-950 w-14 h-14 rounded-full shadow-2xl border-2 border-slate-900 flex items-center justify-center text-2xl transition active:scale-95" title="פנקס משימות (Keep)">
+    <span>📝</span>
+    <span id="floating-tasks-badge" class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-[11px] font-black min-w-[22px] h-[22px] px-1 rounded-full flex items-center justify-center border-2 border-white shadow">0</span>
+  </button>
+
+  <!-- Floating Keep-Style Tasks Panel -->
+  <div id="floating-tasks-panel" class="hidden fixed inset-x-2 bottom-20 sm:inset-x-auto sm:left-5 sm:bottom-22 sm:w-[390px] max-h-[76vh] z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="bg-slate-900 text-white p-3.5 space-y-2.5 shrink-0">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">📝</span>
+          <div>
+            <div id="floating-tasks-title" class="font-extrabold text-sm leading-tight">הפנקס שלי</div>
+            <div class="text-[10px] text-slate-400">גרור לשינוי סדר • לחץ על צבע לשינוי דחיפות</div>
+          </div>
+        </div>
+        <button onclick="toggleFloatingTasks(false)" class="text-slate-400 hover:text-white text-lg px-1.5" title="סגור">✕</button>
+      </div>
+      <div class="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl">
+        <button id="tasks-tab-mine" onclick="setFloatingTasksTab('mine')" class="flex-1 py-1.5 rounded-lg text-xs font-bold bg-amber-400 text-slate-950">📝 הפנקס שלי</button>
+        <button id="tasks-tab-shared" onclick="setFloatingTasksTab('shared')" class="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-300">🤝 משותף איתי</button>
+      </div>
+    </div>
+
+    <!-- Yinon Google Keep Sync Bar -->
+    <div id="yinon-keep-sync-bar" class="hidden bg-amber-50 border-b border-amber-200 px-3 py-2 flex items-center justify-between gap-2 text-[11px] shrink-0">
+      <div class="min-w-0">
+        <div class="font-bold text-amber-950 truncate">Google Keep • yinon@hvn.co.il</div>
+        <div id="keep-sync-status" class="text-[10px] text-amber-800 truncate">מוכן לסנכרון דו-כיווני</div>
+      </div>
+      <button id="keep-sync-btn" onclick="syncYinonGoogleKeep()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-2.5 py-1 rounded-lg text-[11px] shrink-0 transition shadow-2xs">🔄 סנכרן</button>
+    </div>
+
+    <!-- Quick Add Bar -->
+    <div class="p-3 bg-slate-50 border-b border-slate-200 space-y-2 shrink-0">
+      <div class="flex items-center gap-1.5">
+        <input id="floating-task-input" type="text" onkeydown="if(event.key==='Enter') addFloatingTask()" placeholder="כתוב משימה מהירה ולחץ Enter..." class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-500">
+        <button onclick="addFloatingTask()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-3.5 py-2 rounded-xl text-xs shrink-0">+ הוסף</button>
+      </div>
+      <div class="flex items-center justify-between text-[10px]">
+        <span class="text-slate-500 font-semibold">דחיפות:</span>
+        <div class="flex items-center gap-1.5">
+          <button id="prio-pick-urgent" onclick="setNewTaskPriority('urgent')" class="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-bold transition">🔴 דחוף</button>
+          <button id="prio-pick-high" onclick="setNewTaskPriority('high')" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold transition">🟠 חשוב</button>
+          <button id="prio-pick-normal" onclick="setNewTaskPriority('normal')" class="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-900 font-bold transition">🟡 רגיל</button>
+          <button id="prio-pick-low" onclick="setNewTaskPriority('low')" class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold transition">🟢 נמוך</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tasks List -->
+    <div id="floating-tasks-list" class="p-3 overflow-y-auto custom-scrollbar flex-1 bg-white"></div>
+  </div>
 
   <!-- PWA Install Banner (Mobile) -->
   <div id="pwa-install-banner" class="hidden fixed bottom-3 left-3 right-3 z-50 bg-slate-900 text-white rounded-2xl p-3.5 shadow-2xl border border-amber-400/40 flex items-center justify-between gap-3 max-w-md mx-auto">

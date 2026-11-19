@@ -40,7 +40,8 @@ const emptyAppData = {
   standsData: [],
   weeklyRosters: {},
   reflectionsData: [],
-  leadsData: []
+  leadsData: [],
+  tasksData: []
 };
 
 function signToken(payloadObj) {
