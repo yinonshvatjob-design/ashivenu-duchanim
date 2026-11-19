@@ -3334,12 +3334,21 @@
     }
 
     function openPrintWindow(title, bodyHtml, landscape = false) {
-      const win = window.open('', '_blank');
-      if (!win) {
-        alert('אנא אפשר חלונות קופצים (Pop-ups) בדפדפן כדי לייצא ל-PDF.');
-        return;
-      }
-      win.document.write(`<!DOCTYPE html>
+      const oldFrame = document.getElementById('ashivenu-print-frame');
+      if (oldFrame) oldFrame.remove();
+
+      const iframe = document.createElement('iframe');
+      iframe.id = 'ashivenu-print-frame';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+
+      const htmlDoc = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -3347,23 +3356,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
     @page { size: A4 ${landscape ? 'landscape' : 'portrait'}; margin: 8mm; }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     body { font-family: 'Rubik', Arial, sans-serif; margin: 0; padding: 0; color: #0f172a; font-size: 11px; line-height: 1.35; }
-    .no-print { background: #0f172a; color: #fff; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-radius: 8px; }
-    .no-print button { background: #fbbf24; color: #0f172a; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; font-family: inherit; }
-    @media print { .no-print { display: none !important; } }
   </style>
 </head>
 <body>
-  <div class="no-print">
-    <span>📄 תצוגה מקדימה להדפסה / שמירה כ-PDF</span>
-    <button onclick="window.print()">הדפס / שמור כ-PDF</button>
-  </div>
   ${bodyHtml}
-  <script>window.addEventListener('load', () => setTimeout(() => window.print(), 350));<\/script>
 </body>
-</html>`);
-      win.document.close();
+</html>`;
+
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(htmlDoc);
+      doc.close();
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }, 250);
+      };
     }
 
     function exportThursdayOnePagePdf() {
