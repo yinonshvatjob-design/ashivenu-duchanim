@@ -2987,6 +2987,7 @@
 
     // --- 9. PERSISTENT SERVER & LOCAL STORAGE SYNC ---
     async function syncStateToServer() {
+      window.__isSyncingState = true;
       const appData = {
         activistsData,
         standsData,
@@ -3005,8 +3006,14 @@
           headers,
           body: JSON.stringify({ appData, users: usersData })
         });
+        const syncEl = document.getElementById('cloud-tasks-sync-status');
+        if (syncEl) {
+          syncEl.innerText = `☁️ נשמר וסונכרן (${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })})`;
+        }
       } catch (e) {
         // Offline fallback uses localStorage seamlessly
+      } finally {
+        window.__isSyncingState = false;
       }
     }
 
@@ -3364,6 +3371,7 @@
       if (floatingTasksOpen) {
         sharePickerTaskId = null;
         renderFloatingTasks();
+        refreshCloudStateSilently();
         setTimeout(() => {
           const inp = document.getElementById('floating-task-input');
           if (inp && window.innerWidth > 768) inp.focus();
@@ -3535,40 +3543,46 @@
       return list.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || (b.createdAt || 0) - (a.createdAt || 0));
     }
 
-    async function syncYinonGoogleKeep() {
-      if (!currentUser || currentUser.username !== 'yinonshvat') return;
-      const statusEl = document.getElementById('keep-sync-status');
-      const btn = document.getElementById('keep-sync-btn');
-      if (statusEl) statusEl.innerText = 'מסנכרן מול yinon@hvn.co.il...';
-      if (btn) btn.disabled = true;
-
+    async function refreshCloudStateSilently() {
+      if (!authToken || !currentUser || window.__isSyncingState) return;
       try {
-        const myTasks = tasksData.filter(t => t.ownerUsername === 'yinonshvat');
-        const res = await fetch('/api/keep-sync', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify({ tasks: myTasks })
+        const res = await fetch('/api/state', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
         });
+        if (!res.ok) return;
         const data = await res.json();
-        if (data.ok && Array.isArray(data.tasks)) {
-          const otherTasks = tasksData.filter(t => t.ownerUsername !== 'yinonshvat');
-          tasksData = [...data.tasks, ...otherTasks];
-          renderFloatingTasks();
-          syncStateToServer();
-          if (statusEl) statusEl.innerText = `סונכרן עם Keep (${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}) ✓`;
-        } else {
-          if (statusEl) statusEl.innerText = data.needsSetup ? 'נדרש חיבור מפתח Google Keep בשרת' : (data.error || 'שגיאת סנכרון');
-          if (data.needsSetup) alert(data.error);
+        if (data.requiresAuth || !data.appData) return;
+
+        if (Array.isArray(data.users) && data.users.length > 0) usersData = data.users;
+        if (Array.isArray(data.appData.activistsData)) activistsData = data.appData.activistsData;
+        if (Array.isArray(data.appData.standsData)) standsData = data.appData.standsData;
+        if (data.appData.weeklyRosters) weeklyRosters = data.appData.weeklyRosters;
+        if (Array.isArray(data.appData.reflectionsData)) reflectionsData = data.appData.reflectionsData;
+        if (Array.isArray(data.appData.leadsData)) leadsData = data.appData.leadsData;
+        if (Array.isArray(data.appData.tasksData)) tasksData = data.appData.tasksData;
+
+        localStorage.setItem('ashivenu_v2_app_data', JSON.stringify(data.appData));
+        renderFloatingTasks();
+        renderActivistsAccordion();
+        renderStandsRoster();
+        updateMapMarkers();
+        const syncEl = document.getElementById('cloud-tasks-sync-status');
+        if (syncEl) {
+          syncEl.innerText = `☁️ מסונכרן (${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })})`;
         }
-      } catch (err) {
-        if (statusEl) statusEl.innerText = 'שגיאת תקשורת בסנכרון Keep';
-      } finally {
-        if (btn) btn.disabled = false;
+      } catch (e) {
+        // Silent background refresh
       }
     }
+
+    // Auto-sync across devices when returning to tab or every 20s while active
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshCloudStateSilently();
+    });
+    window.addEventListener('focus', () => refreshCloudStateSilently());
+    setInterval(() => {
+      if (document.visibilityState === 'visible') refreshCloudStateSilently();
+    }, 20000);
 
     function renderFloatingTasks() {
       const fab = document.getElementById('floating-tasks-fab');
@@ -3608,11 +3622,6 @@
         tabShared.className = floatingTasksTab === 'shared'
           ? 'flex-1 py-1.5 rounded-lg text-xs font-bold bg-amber-400 text-slate-950 shadow-xs transition'
           : 'flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition';
-      }
-
-      const keepBar = document.getElementById('yinon-keep-sync-bar');
-      if (keepBar) {
-        keepBar.classList.toggle('hidden', me !== 'yinonshvat' || floatingTasksTab !== 'mine');
       }
 
       setNewTaskPriority(newTaskPriority);
@@ -3724,13 +3733,10 @@
       </div>
     </div>
 
-    <!-- Yinon Google Keep Sync Bar -->
-    <div id="yinon-keep-sync-bar" class="hidden bg-amber-50 border-b border-amber-200 px-3 py-2 flex items-center justify-between gap-2 text-[11px] shrink-0">
-      <div class="min-w-0">
-        <div class="font-bold text-amber-950 truncate">Google Keep • yinon@hvn.co.il</div>
-        <div id="keep-sync-status" class="text-[10px] text-amber-800 truncate">מוכן לסנכרון דו-כיווני</div>
-      </div>
-      <button id="keep-sync-btn" onclick="syncYinonGoogleKeep()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-2.5 py-1 rounded-lg text-[11px] shrink-0 transition shadow-2xs">🔄 סנכרן</button>
+    <!-- Live Cloud Sync Status Bar -->
+    <div class="bg-slate-100 border-b border-slate-200 px-3 py-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-600 shrink-0">
+      <span id="cloud-tasks-sync-status" class="font-semibold truncate">☁️ מסונכרן בזמן אמת בין כל המכשירים</span>
+      <button onclick="refreshCloudStateSilently()" class="text-slate-700 hover:text-slate-950 font-bold px-2 py-0.5 rounded bg-white border border-slate-200 transition shrink-0" title="רענן מהענן">🔄 רענן</button>
     </div>
 
     <!-- Quick Add Bar -->
