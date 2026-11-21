@@ -1016,6 +1016,13 @@
           </div>
         </div>
 
+        <!-- Interviewee Selector (Lead / Female Rep / Activist) -->
+        <div class="bg-purple-50/70 border border-purple-200/80 rounded-xl p-2.5 space-y-1.5">
+          <label class="block font-bold text-purple-950">🎤 מול מי נעשית הרפלקציה? (אחראי / נציגה / פעיל)</label>
+          <div id="modal-ref-interviewee-pills" class="flex flex-wrap gap-1.5"></div>
+          <input type="text" id="modal-ref-interviewee" placeholder="למשל: אחראי — עז חקק, או נציגה — מוריה..." class="w-full p-2 bg-white border border-purple-200 rounded-lg text-xs outline-none focus:border-purple-500">
+        </div>
+
         <div class="grid grid-cols-3 gap-3">
           <div>
             <label class="block font-bold text-slate-700 mb-1">כמות נוער שפגשנו</label>
@@ -1039,6 +1046,11 @@
         <div>
           <label class="block font-bold text-slate-700 mb-1">סיפור מיוחד / שיחת עומק מהלילה</label>
           <textarea id="modal-ref-story" rows="3" placeholder="פרט מקרה מיוחד, נער שפתח את הלב, שיחה מעניינת שנוצרה בדוכן..." class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-500"></textarea>
+        </div>
+
+        <div class="bg-amber-50/60 border border-amber-200/80 rounded-xl p-2.5">
+          <label class="block font-bold text-amber-950 mb-1">📦 תשאול בנושא לוגיסטי (ציוד, נרות, שולחן, כיבוד, שינוע וחוסרים)</label>
+          <textarea id="modal-ref-logistics" rows="2" placeholder="האם הגיע כל הציוד בזמן? האם חסרים נרות/כיבוד/שתייה/שולחן? תקלות שינוע או דברים שצריך להשלים לשבוע הבא..." class="w-full p-2 bg-white border border-amber-200 rounded-lg outline-none focus:border-amber-500"></textarea>
         </div>
 
         <div>
@@ -2312,12 +2324,29 @@
 
             </div>
 
-            <!-- Stand Footer & Reflection Trigger -->
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
-              <button onclick="openReflectionForStand('${stand.name}', '${assigned.map(a => a.name).join(', ')}')" class="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 w-full justify-center">
-                <span>📝</span>
-                <span>הזנת רפלקציה / סיכום משמרת</span>
-              </button>
+            <!-- Stand Footer & Multi-Reflection Trigger -->
+            <div class="pt-2 border-t border-slate-100 space-y-1.5">
+              ${(() => {
+                const curW = weeksList[currentWeekIndex];
+                const standRefs = reflectionsData.filter(r => r.stand === stand.name && (r.weekId === curW.id || r.date === curW.name));
+                const existingHtml = standRefs.length > 0 ? `
+                  <div class="bg-purple-50/80 border border-purple-200/80 rounded-lg px-2.5 py-1.5 text-[10.5px] text-purple-900 space-y-1">
+                    <div class="font-bold flex items-center justify-between">
+                      <span>✅ רפלקציות שהוזנו השבוע (${standRefs.length}):</span>
+                      <button onclick="switchPage('reflections')" class="text-purple-700 hover:underline font-semibold">צפה בכולן ➔</button>
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                      ${standRefs.map(r => `<span class="bg-white border border-purple-200 px-1.5 py-0.5 rounded font-semibold">${escapeHtml(r.interviewee || r.activists || 'רפלקציה')}</span>`).join('')}
+                    </div>
+                  </div>
+                ` : '';
+                return existingHtml + `
+                  <button onclick="openReflectionForStand('${stand.id}')" class="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 w-full justify-center">
+                    <span>📝</span>
+                    <span>${standRefs.length > 0 ? '+ הוסף רפלקציה נוספת (אחראי / נציגה)' : 'הזנת רפלקציה / סיכום משמרת'}</span>
+                  </button>
+                `;
+              })()}
             </div>
 
           </div>
@@ -2815,9 +2844,10 @@
           <!-- Reflection Header -->
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm font-black text-slate-900">${ref.stand}</span>
                 <span class="text-xs bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-md">${ref.date}</span>
+                ${ref.interviewee ? `<span class="text-[11px] bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-0.5 rounded-full">🎤 ${escapeHtml(ref.interviewee)}</span>` : ''}
               </div>
               <div class="text-xs text-slate-500 mt-0.5">פעילים במשמרת: <strong class="text-slate-800">${ref.activists}</strong></div>
             </div>
@@ -2849,6 +2879,16 @@
             </div>
             <p class="text-amber-900 font-normal">${ref.story}</p>
           </div>
+
+          <!-- Logistics Inquiry Section -->
+          ${ref.logistics ? `
+            <div class="bg-amber-50/90 border border-amber-300/80 rounded-xl p-3 text-xs leading-relaxed">
+              <div class="font-bold text-amber-950 flex items-center gap-1.5 mb-1">
+                <span>📦 תשאול לוגיסטי (ציוד, כיבוד ושינוע):</span>
+              </div>
+              <p class="text-amber-950 font-normal">${escapeHtml(ref.logistics)}</p>
+            </div>
+          ` : ''}
 
           <!-- Youth Leads for Follow-up -->
           ${ref.leads ? `
@@ -2887,40 +2927,94 @@
       document.getElementById('modal-reflection').classList.add('hidden');
     }
 
-    function openReflectionForStand(standName, activistsStr) {
-      document.getElementById('modal-ref-stand').value = standName;
-      document.getElementById('modal-ref-activists').value = activistsStr || '';
+    function selectReflectionInterviewee(label) {
+      const inp = document.getElementById('modal-ref-interviewee');
+      if (inp) inp.value = label;
+    }
+
+    function openReflectionForStand(standIdOrName, legacyActivistsStr) {
+      const stand = standsData.find(s => s.id === standIdOrName || s.name === standIdOrName);
+      const currentRoster = getCurrentWeekRoster();
+      const sData = stand ? (currentRoster[stand.id] || { assignedIds: [] }) : { assignedIds: [] };
+      const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
+      const { maleLead } = stand ? getStandLeads(stand, sData) : { maleLead: null };
+
+      document.getElementById('modal-ref-stand').value = stand ? stand.name : standIdOrName;
+      document.getElementById('modal-ref-activists').value = assigned.length > 0
+        ? assigned.map(a => a.name).join(', ')
+        : (legacyActivistsStr || (maleLead ? maleLead.name : ''));
+      if (stand && stand.hours) {
+        document.getElementById('modal-ref-hours').value = stand.hours;
+      }
+
+      const pillsEl = document.getElementById('modal-ref-interviewee-pills');
+      const intervieweeInp = document.getElementById('modal-ref-interviewee');
+      if (intervieweeInp) intervieweeInp.value = '';
+      if (pillsEl) {
+        const candidates = [];
+        if (maleLead) {
+          candidates.push({ label: `אחראי: ${maleLead.name}`, badge: `⭐ אחראי: ${maleLead.name}`, cls: 'bg-amber-100 text-amber-900 border-amber-300' });
+        }
+        assigned.forEach(a => {
+          if (maleLead && a.id === maleLead.id) return;
+          const isFemale = a.gender === 'female';
+          candidates.push({
+            label: `${isFemale ? 'נציגה' : 'פעיל'}: ${a.name}`,
+            badge: `${isFemale ? '👩 נציגה' : '👨 פעיל'}: ${a.name}`,
+            cls: isFemale ? 'bg-rose-100 text-rose-900 border-rose-300' : 'bg-blue-100 text-blue-900 border-blue-300'
+          });
+        });
+        pillsEl.innerHTML = candidates.map(c => `
+          <button type="button" onclick="selectReflectionInterviewee('${escapeHtml(c.label)}')" class="px-2 py-0.5 rounded-full border text-[11px] font-bold hover:opacity-85 transition ${c.cls}">${escapeHtml(c.badge)}</button>
+        `).join('') || '<span class="text-[10px] text-slate-400">הזן שם מרואיין/ת למטה</span>';
+        if (candidates.length > 0 && intervieweeInp) {
+          intervieweeInp.value = candidates[0].label;
+        }
+      }
+
+      const logInp = document.getElementById('modal-ref-logistics');
+      if (logInp) logInp.value = '';
       openNewReflectionModal();
     }
 
     function saveNewReflection() {
       const stand = document.getElementById('modal-ref-stand').value;
       const activists = document.getElementById('modal-ref-activists').value.trim();
+      const interviewee = document.getElementById('modal-ref-interviewee') ? document.getElementById('modal-ref-interviewee').value.trim() : '';
       const youthCount = parseInt(document.getElementById('modal-ref-youth-count').value) || 0;
       const ageRange = document.getElementById('modal-ref-age-range').value.trim();
       const hours = document.getElementById('modal-ref-hours').value.trim();
       const atmosphere = document.getElementById('modal-ref-atmosphere').value.trim();
       const story = document.getElementById('modal-ref-story').value.trim();
+      const logistics = document.getElementById('modal-ref-logistics') ? document.getElementById('modal-ref-logistics').value.trim() : '';
       const leads = document.getElementById('modal-ref-leads').value.trim();
 
       const checkedTags = [];
       document.querySelectorAll('input[name="ref-ai-tag"]:checked').forEach(cb => checkedTags.push(cb.value));
 
-      if (!activists || !story) {
-        alert('אנא הזן לפחות את שמות הפעילים וסיפור/תובנה מהמשמרת!');
+      if (!activists && !interviewee) {
+        alert('אנא הזן לפחות את שם המרואיין/ת או שמות הפעילים!');
+        return;
+      }
+      if (!story && !logistics && !atmosphere) {
+        alert('אנא הזן תוכן ברפלקציה (סיפור, אווירה או תשאול לוגיסטי)!');
         return;
       }
 
+      const curWeek = weeksList[currentWeekIndex];
       const newRef = {
         id: Date.now(),
+        weekId: curWeek.id,
         stand,
-        date: weeksList[currentWeekIndex].name,
-        activists,
+        date: curWeek.name,
+        interviewee,
+        activists: activists || interviewee,
         youthCount,
         ageRange,
         hours,
         atmosphere,
         story,
+        logistics,
         leads,
         aiTags: checkedTags.length > 0 ? checkedTags : ['התעניינות ביהדות / חזרה בתשובה', 'שאלות באמונה והשקפה']
       };
@@ -2934,7 +3028,7 @@
           name: leads.split(' ')[0] + ' ' + (leads.split(' ')[1] || ''),
           phone: leads.match(/05\d-?\d{7}/) ? leads.match(/05\d-?\d{7}/)[0] : 'ללא טלפון',
           stand: stand,
-          week: weeksList[currentWeekIndex].parasha,
+          week: curWeek.parasha,
           interest: checkedTags[0] || 'התעניינות ביהדות / חזרה בתשובה',
           interestTags: checkedTags.length > 0 ? checkedTags.slice(0, 3) : ['התעניינות ביהדות / חזרה בתשובה'],
           status: 'ממתין ליצירת קשר',
@@ -2944,12 +3038,18 @@
         leadsData.unshift(autoLead);
       }
 
+      document.getElementById('modal-ref-atmosphere').value = '';
+      document.getElementById('modal-ref-story').value = '';
+      document.getElementById('modal-ref-leads').value = '';
+      if (document.getElementById('modal-ref-logistics')) document.getElementById('modal-ref-logistics').value = '';
+      if (document.getElementById('modal-ref-interviewee')) document.getElementById('modal-ref-interviewee').value = '';
+
       closeNewReflectionModal();
-      switchPage('reflections');
+      renderStandsRoster();
       renderReflections();
       renderLeads();
       syncStateToServer();
-      alert('הרפלקציה נקלטה בהצלחה במאגר, והמתעניינים הועברו ישירות לדף 5 (מאגר מתעניינים)!');
+      alert(`הרפלקציה עבור ${stand}${interviewee ? ' (' + interviewee + ')' : ''} נשמרה בהצלחה! ניתן להוסיף רפלקציה נוספת לאותה עמדה בכל עת.`);
     }
 
     function generateAILearningReport() {
