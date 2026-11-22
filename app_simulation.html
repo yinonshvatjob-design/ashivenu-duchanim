@@ -1025,7 +1025,7 @@
 
         <div class="grid grid-cols-3 gap-3">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">כמות נוער שפגשנו</label>
+            <label class="block font-bold text-slate-700 mb-1">כמות משתתפים שפגשנו</label>
             <input type="number" id="modal-ref-youth-count" value="35" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none font-bold text-center">
           </div>
           <div>
@@ -1054,55 +1054,44 @@
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">נוער לליווי והמשך טיפול (שם + טלפון + צורך)</label>
+          <label class="block font-bold text-slate-700 mb-1">משתתפים לליווי והמשך טיפול (שם + טלפון + צורך)</label>
           <input type="text" id="modal-ref-leads" placeholder="למשל: דורון 052-8765432 (מחפש מסגרת לינה), אביב (מעוניין בשיעור תורה)" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-500">
         </div>
 
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">תגיות AI חכמות — התקרבות ליהדות ותשובה</label>
-          <div class="flex flex-wrap gap-2 pt-1">
-            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
-              <input type="checkbox" name="ref-ai-tag" value="התעניינות ביהדות / חזרה בתשובה" checked class="rounded text-purple-600">
-              <span>התעניינות ביהדות / חזרה בתשובה</span>
-            </label>
-            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
-              <input type="checkbox" name="ref-ai-tag" value="שאלות באמונה והשקפה" checked class="rounded text-purple-600">
-              <span>שאלות באמונה והשקפה</span>
-            </label>
-            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
-              <input type="checkbox" name="ref-ai-tag" value="הנחת תפילין / ציצית" checked class="rounded text-purple-600">
-              <span>הנחת תפילין / ציצית</span>
-            </label>
-            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
-              <input type="checkbox" name="ref-ai-tag" value="רצון להגיע לשיעור תורה" class="rounded text-purple-600">
-              <span>רצון להגיע לשיעור תורה</span>
-            </label>
-            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
-              <input type="checkbox" name="ref-ai-tag" value="אירוח לשבת / סעודת שבת" class="rounded text-purple-600">
-              <span>אירוח לשבת / סעודת שבת</span>
-            </label>
-            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
-              <input type="checkbox" name="ref-ai-tag" value="שיחת נפש וחיפוש משמעות" class="rounded text-purple-600">
-              <span>שיחת נפש וחיפוש משמעות</span>
-            </label>
-            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
-              <input type="checkbox" name="ref-ai-tag" value="ליווי תורני אישי (חברותא)" class="rounded text-purple-600">
-              <span>ליווי תורני אישי (חברותא)</span>
-            </label>
-            <label class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg cursor-pointer">
-              <input type="checkbox" name="ref-ai-tag" value="התחזקות בשמירת שבת ומצוות" class="rounded text-purple-600">
-              <span>התחזקות בשמירת שבת ומצוות</span>
-            </label>
-          </div>
+        <div class="bg-purple-50/60 border border-purple-200/70 rounded-xl p-2.5 text-[11px] text-purple-900 flex items-center gap-2">
+          <span>✨</span>
+          <span>לאחר השמירה, מנוע ה-AI ינתח אוטומטית את הרפלקציה ויחלץ תגיות נושא, תובנה איכותנית ומשימות לוגיסטיות לטיפול.</span>
         </div>
 
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
         <button onclick="closeNewReflectionModal()" class="px-4 py-2 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100">ביטול</button>
-        <button onclick="saveNewReflection()" class="px-5 py-2 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-xl text-xs shadow-md">שמור רפלקציה במאגר</button>
+        <button onclick="saveNewReflection()" class="px-5 py-2 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-xl text-xs shadow-md">שמור ונתח ב-AI ✨</button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Real AI Insights Report Modal -->
+  <div id="modal-ai-report" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white p-4 flex items-center justify-between">
+        <div>
+          <h3 class="font-black text-base flex items-center gap-2"><span>✨</span><span>לקט תובנות וניתוח שטח (AI)</span></h3>
+          <div id="ai-report-subtitle" class="text-[11px] text-slate-300 mt-0.5">מנתח רפלקציות אמיתיות מהמאגר...</div>
+        </div>
+        <button onclick="closeAiReportModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
+      </div>
+      <div id="ai-report-body" class="p-4 overflow-y-auto custom-scrollbar space-y-4 text-xs flex-1"></div>
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        <div id="ai-report-mode-badge" class="text-[10px] text-slate-500"></div>
+        <div class="flex items-center gap-2">
+          <button onclick="copyAiReportForWhatsapp()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition">📋 העתק לוואטסאפ</button>
+          <button onclick="exportAiReportPdf()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs transition">📄 שמור כ-PDF</button>
+          <button onclick="closeAiReportModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-xl text-xs transition">סגור</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2855,7 +2844,7 @@
             <!-- Key Metrics -->
             <div class="flex items-center gap-3 text-xs">
               <div class="bg-purple-50 text-purple-900 border border-purple-200/70 px-2.5 py-1 rounded-lg font-bold">
-                👥 נוער: ${ref.youthCount}
+                👥 משתתפים: ${ref.youthCount}
               </div>
               <div class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg">
                 טווח גיל: ${ref.ageRange}
@@ -2890,11 +2879,34 @@
             </div>
           ` : ''}
 
-          <!-- Youth Leads for Follow-up -->
+          <!-- AI Qualitative & Logistics Extracted Insights -->
+          ${ref.aiQualitativeInsight || (Array.isArray(ref.aiLogisticsActions) && ref.aiLogisticsActions.length > 0) ? `
+            <div class="bg-gradient-to-l from-purple-50 to-indigo-50/70 border border-purple-200 rounded-xl p-3 text-xs space-y-2">
+              ${ref.aiQualitativeInsight ? `
+                <div>
+                  <div class="font-bold text-purple-950 mb-0.5">✨ תובנה איכותנית (AI):</div>
+                  <p class="text-purple-900 leading-relaxed">${escapeHtml(ref.aiQualitativeInsight)}</p>
+                </div>
+              ` : ''}
+              ${Array.isArray(ref.aiLogisticsActions) && ref.aiLogisticsActions.length > 0 ? `
+                <div class="pt-1.5 border-t border-purple-200/60 space-y-1">
+                  <div class="font-bold text-amber-950">📦 משימות לוגיסטיות שזוהו לטיפול:</div>
+                  ${ref.aiLogisticsActions.map(actTxt => `
+                    <div class="flex items-center justify-between gap-2 bg-white/80 border border-amber-200 rounded-lg px-2 py-1">
+                      <span class="text-slate-800">${escapeHtml(actTxt)}</span>
+                      <button onclick="sendLogisticsActionToTasks('${escapeHtml(actTxt).replace(/'/g, "\\'")}')" class="text-[10px] bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-2 py-0.5 rounded shrink-0 transition">+ לפנקס</button>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Participants Leads for Follow-up -->
           ${ref.leads ? `
             <div class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 text-xs leading-relaxed">
               <div class="font-bold text-blue-950 flex items-center gap-1.5 mb-1">
-                <span>🎯 נוער שפגשנו ודורש המשך קשר / ליווי:</span>
+                <span>🎯 משתתפים שפגשנו ודורשים המשך קשר / ליווי:</span>
               </div>
               <p class="text-blue-900 font-normal font-mono text-[11px]" dir="rtl">${ref.leads}</p>
             </div>
@@ -2904,15 +2916,15 @@
           <div class="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
             <div class="flex flex-wrap items-center gap-1.5">
               <span class="text-[10px] text-purple-700 font-bold">תגיות AI:</span>
-              ${ref.aiTags.map(tag => `
+              ${(ref.aiTags || []).map(tag => `
                 <span class="text-[10px] bg-purple-50 text-purple-800 border border-purple-200/70 font-semibold px-2 py-0.5 rounded-full">
-                  🏷️ ${tag}
+                  🏷️ ${escapeHtml(tag)}
                 </span>
               `).join('')}
             </div>
 
-            <div class="text-[11px] text-slate-400">
-              תועד ע"י הרכז במערכת השיבנו דוכנים
+            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+              <button onclick="analyzeReflectionWithAI(${ref.id})" class="text-[10px] bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold px-2 py-0.5 rounded-lg transition">✨ נתח ב-AI</button>
             </div>
           </div>
 
@@ -3016,7 +3028,9 @@
         story,
         logistics,
         leads,
-        aiTags: checkedTags.length > 0 ? checkedTags : ['התעניינות ביהדות / חזרה בתשובה', 'שאלות באמונה והשקפה']
+        aiTags: ['מנתח ב-AI...'],
+        aiQualitativeInsight: '',
+        aiLogisticsActions: []
       };
 
       reflectionsData.unshift(newRef);
@@ -3029,8 +3043,8 @@
           phone: leads.match(/05\d-?\d{7}/) ? leads.match(/05\d-?\d{7}/)[0] : 'ללא טלפון',
           stand: stand,
           week: curWeek.parasha,
-          interest: checkedTags[0] || 'התעניינות ביהדות / חזרה בתשובה',
-          interestTags: checkedTags.length > 0 ? checkedTags.slice(0, 3) : ['התעניינות ביהדות / חזרה בתשובה'],
+          interest: 'התעניינות ביהדות / חזרה בתשובה',
+          interestTags: ['התעניינות ביהדות / חזרה בתשובה'],
           status: 'ממתין ליצירת קשר',
           assignedActivist: activists.split(',')[0] || '',
           notes: `נוסף אוטומטית מרפלקציית משמרת ${stand}: "${leads}"`
@@ -3049,11 +3063,173 @@
       renderReflections();
       renderLeads();
       syncStateToServer();
-      alert(`הרפלקציה עבור ${stand}${interviewee ? ' (' + interviewee + ')' : ''} נשמרה בהצלחה! ניתן להוסיף רפלקציה נוספת לאותה עמדה בכל עת.`);
+      analyzeReflectionWithAI(newRef.id, true);
+      alert(`הרפלקציה עבור ${stand}${interviewee ? ' (' + interviewee + ')' : ''} נשמרה בהצלחה! ה-AI מנתח אותה כעת ברקע.`);
     }
 
-    function generateAILearningReport() {
-      alert(`✨ מנוע ה-AI של השיבנו דוכנים הפיק דוח תובנות שבועי:\n\n• סה"כ נוער שפגשנו ועצר בדוכנים: 108 צעירים\n• הנחות תפילין וקבלת ציצית בעמדות: 34 נערים\n• בקשות להשתלבות בשיעורי תורה וחברותות: 12 פניות חדשות\n• התעניינות באירוח שבת קרובה: 7 צעירים\n• מוקד הפעילות המוביל בשאלות אמונה והשקפה: כיכר ציון ומרכז השיעורים נחלאות.`);
+    async function analyzeReflectionWithAI(refId, silent = false) {
+      const ref = reflectionsData.find(r => r.id === refId);
+      if (!ref || !authToken) return;
+      try {
+        const res = await fetch('/api/ai-insights', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ action: 'analyze_reflection', reflection: ref })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          if (Array.isArray(data.aiTags)) ref.aiTags = data.aiTags;
+          ref.aiQualitativeInsight = data.qualitativeInsight || '';
+          ref.aiLogisticsActions = Array.isArray(data.logisticsActions) ? data.logisticsActions : [];
+          renderReflections();
+          syncStateToServer();
+        } else if (!silent) {
+          alert(data.error || 'שגיאה בניתוח ה-AI');
+        }
+      } catch (err) {
+        if (!silent) alert('שגיאת תקשורת מול שירות ה-AI');
+      }
+    }
+
+    function sendLogisticsActionToTasks(actionText) {
+      if (!currentUser || !actionText) return;
+      const myTasks = tasksData.filter(t => t.ownerUsername === currentUser.username);
+      const minOrder = myTasks.length > 0 ? Math.min(...myTasks.map(t => t.order || 0)) - 1 : 0;
+      tasksData.unshift({
+        id: 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        ownerUsername: currentUser.username,
+        ownerName: currentUser.fullName || currentUser.username,
+        text: `📦 ${actionText}`,
+        done: false,
+        priority: 'high',
+        sharedWith: ['ALL'],
+        order: minOrder,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+      renderFloatingTasks();
+      syncStateToServer();
+      alert('המשימה הלוגיסטית נוספה לפנקס המשימות הצף (משותפת לצוות) ✓');
+    }
+
+    let lastGeneratedAiReport = null;
+
+    function closeAiReportModal() {
+      const m = document.getElementById('modal-ai-report');
+      if (m) m.classList.add('hidden');
+    }
+
+    async function generateAILearningReport() {
+      const modal = document.getElementById('modal-ai-report');
+      const body = document.getElementById('ai-report-body');
+      const sub = document.getElementById('ai-report-subtitle');
+      const modeBadge = document.getElementById('ai-report-mode-badge');
+      if (!modal || !body) return;
+
+      const filterStand = document.getElementById('reflection-filter-stand')?.value || 'all';
+      const list = reflectionsData.filter(r => filterStand === 'all' || r.stand === filterStand);
+      const scopeLabel = filterStand === 'all' ? `כל העמדות (${list.length} רפלקציות)` : `עמדת ${filterStand} (${list.length} רפלקציות)`;
+
+      modal.classList.remove('hidden');
+      if (sub) sub.innerText = `מנתח ${scopeLabel}...`;
+      if (modeBadge) modeBadge.innerText = '';
+      body.innerHTML = '<div class="text-center py-10 text-slate-500 font-bold">✨ מנתח רפלקציות אמיתיות ומפיק תובנות איכותניות ולוגיסטיות...</div>';
+
+      try {
+        const res = await fetch('/api/ai-insights', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ action: 'weekly_report', reflections: list, scopeLabel })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'שגיאה בהפקת הדוח');
+
+        lastGeneratedAiReport = { ...data, scopeLabel, count: list.length };
+        if (sub) sub.innerText = `${scopeLabel} • הופק ${new Date().toLocaleDateString('he-IL')} ${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`;
+        if (modeBadge) {
+          modeBadge.innerText = data.mode === 'gemini'
+            ? '✨ הופק באמצעות Gemini AI (ניתוח עומק אמיתי)'
+            : '📊 הופק מחילוץ נתונים אמיתי (הוסף GEMINI_API_KEY ב-Vercel לניתוח עומק AI)';
+        }
+
+        body.innerHTML = `
+          <div class="bg-slate-900 text-white rounded-xl p-3.5 space-y-1">
+            <div class="text-amber-400 font-extrabold text-xs">📊 סיכום תמונת מצב אמיתית</div>
+            <p class="text-slate-100 leading-relaxed">${escapeHtml(data.summary || '')}</p>
+          </div>
+
+          ${Array.isArray(data.standBreakdown) && data.standBreakdown.length > 0 ? `
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
+              <div class="font-extrabold text-slate-800">📍 פילוח משתתפים לפי עמדות:</div>
+              <div class="flex flex-wrap gap-1.5">
+                ${data.standBreakdown.map(s => `<span class="bg-white border border-slate-200 px-2.5 py-1 rounded-lg font-semibold text-slate-700">${escapeHtml(s)}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="bg-purple-50/70 border border-purple-200 rounded-xl p-3 space-y-1.5">
+            <div class="font-extrabold text-purple-950">💡 תובנות איכותניות ומגמות מהשטח:</div>
+            <ul class="list-disc pr-4 space-y-1 text-purple-950">
+              ${(data.qualitativeInsights || []).map(item => `<li>${escapeHtml(item)}</li>`).join('') || '<li class="text-slate-400">אין עדיין תובנות</li>'}
+            </ul>
+          </div>
+
+          <div class="bg-amber-50/80 border border-amber-300 rounded-xl p-3 space-y-1.5">
+            <div class="font-extrabold text-amber-950">📦 ריכוז לוגיסטי לטיפול לקראת השבוע הבא:</div>
+            <div class="space-y-1.5">
+              ${(data.logisticsSummary || []).map(item => `
+                <div class="flex items-center justify-between gap-2 bg-white border border-amber-200 rounded-lg px-2.5 py-1.5">
+                  <span class="text-slate-800 font-medium">${escapeHtml(item)}</span>
+                  ${!item.includes('לא דווחו') ? `<button onclick="sendLogisticsActionToTasks('${escapeHtml(item).replace(/'/g, "\\'")}')" class="text-[10px] bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-2 py-0.5 rounded shrink-0">+ לפנקס</button>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        body.innerHTML = `<div class="text-center py-8 text-red-600 font-bold">שגיאה בהפקת הדוח: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function copyAiReportForWhatsapp() {
+      if (!lastGeneratedAiReport) return;
+      const r = lastGeneratedAiReport;
+      const lines = [
+        `*✨ לקט תובנות שטח "השיבנו דוכנים" — ${r.scopeLabel}*`,
+        '',
+        `*📊 סיכום:* ${r.summary || ''}`,
+        '',
+        ...(r.standBreakdown?.length ? ['*📍 משתתפים לפי עמדות:*', ...r.standBreakdown.map(s => `• ${s}`), ''] : []),
+        '*💡 תובנות איכותניות:*',
+        ...(r.qualitativeInsights || []).map(i => `• ${i}`),
+        '',
+        '*📦 ריכוז לוגיסטי לשבוע הבא:*',
+        ...(r.logisticsSummary || []).map(i => `• ${i}`)
+      ].join('\n');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(lines).then(() => alert('📋 לקט התובנות הועתק לוואטסאפ!'));
+      } else {
+        prompt('העתק את לקט התובנות:', lines);
+      }
+    }
+
+    function exportAiReportPdf() {
+      const body = document.getElementById('ai-report-body');
+      if (!body || !lastGeneratedAiReport) return;
+      const html = `
+        <div style="border-bottom:2.5px solid #0f172a;padding-bottom:6px;margin-bottom:10px;">
+          <h1 style="margin:0;font-size:16px;font-weight:800;">✨ לקט תובנות שטח ולוגיסטיקה — השיבנו דוכנים</h1>
+          <div style="font-size:10.5px;color:#475569;">${escapeHtml(lastGeneratedAiReport.scopeLabel)} • הופק ${new Date().toLocaleDateString('he-IL')}</div>
+        </div>
+        ${body.innerHTML}
+      `;
+      openPrintWindow('לקט תובנות שטח - השיבנו דוכנים', html, false);
     }
 
 
