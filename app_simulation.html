@@ -3158,14 +3158,35 @@
             : '📊 הופק מחילוץ נתונים אמיתי (הוסף GEMINI_API_KEY ב-Vercel לניתוח עומק AI)';
         }
 
+        const stats = data.stats || { totalParticipants: 0, standsCount: 0, leadsCount: 0, reflectionsCount: list.length };
         body.innerHTML = `
-          <div class="bg-slate-900 text-white rounded-xl p-3.5 space-y-1">
-            <div class="text-amber-400 font-extrabold text-xs">📊 סיכום תמונת מצב אמיתית</div>
-            <p class="text-slate-100 leading-relaxed">${escapeHtml(data.summary || '')}</p>
+          <!-- Executive KPI Strip -->
+          <div class="grid grid-cols-4 gap-2 text-center">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-2">
+              <div class="text-lg font-black text-slate-900">${stats.totalParticipants || 0}</div>
+              <div class="text-[10px] font-bold text-slate-500">סה"כ משתתפים</div>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-2">
+              <div class="text-lg font-black text-purple-800">${stats.reflectionsCount || list.length}</div>
+              <div class="text-[10px] font-bold text-slate-500">רפלקציות</div>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-2">
+              <div class="text-lg font-black text-amber-700">${stats.standsCount || 0}</div>
+              <div class="text-[10px] font-bold text-slate-500">עמדות מדווחות</div>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-2">
+              <div class="text-lg font-black text-emerald-700">${stats.leadsCount || 0}</div>
+              <div class="text-[10px] font-bold text-slate-500">פניות לליווי</div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 text-white rounded-xl p-4 space-y-1.5">
+            <div class="text-amber-400 font-extrabold text-xs tracking-wide">📊 תקציר מנהלים</div>
+            <p class="text-slate-100 leading-relaxed text-[12.5px]">${escapeHtml(data.summary || '')}</p>
           </div>
 
           ${Array.isArray(data.standBreakdown) && data.standBreakdown.length > 0 ? `
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5">
               <div class="font-extrabold text-slate-800">📍 פילוח משתתפים לפי עמדות:</div>
               <div class="flex flex-wrap gap-1.5">
                 ${data.standBreakdown.map(s => `<span class="bg-white border border-slate-200 px-2.5 py-1 rounded-lg font-semibold text-slate-700">${escapeHtml(s)}</span>`).join('')}
@@ -3173,14 +3194,23 @@
             </div>
           ` : ''}
 
-          <div class="bg-purple-50/70 border border-purple-200 rounded-xl p-3 space-y-1.5">
-            <div class="font-extrabold text-purple-950">💡 תובנות איכותניות ומגמות מהשטח:</div>
-            <ul class="list-disc pr-4 space-y-1 text-purple-950">
+          <div class="bg-purple-50/70 border border-purple-200 rounded-xl p-3.5 space-y-2">
+            <div class="font-extrabold text-purple-950">💡 ניתוח איכותני ומגמות שטח:</div>
+            <ul class="list-disc pr-4 space-y-1.5 text-purple-950 leading-relaxed">
               ${(data.qualitativeInsights || []).map(item => `<li>${escapeHtml(item)}</li>`).join('') || '<li class="text-slate-400">אין עדיין תובנות</li>'}
             </ul>
           </div>
 
-          <div class="bg-amber-50/80 border border-amber-300 rounded-xl p-3 space-y-1.5">
+          ${Array.isArray(data.recommendations) && data.recommendations.length > 0 ? `
+            <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-3.5 space-y-2">
+              <div class="font-extrabold text-blue-950">🎯 המלצות אופרטיביות להנהלה ולרכזים:</div>
+              <ul class="list-disc pr-4 space-y-1.5 text-blue-950 leading-relaxed">
+                ${data.recommendations.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+
+          <div class="bg-amber-50/80 border border-amber-300 rounded-xl p-3.5 space-y-2">
             <div class="font-extrabold text-amber-950">📦 ריכוז לוגיסטי לטיפול לקראת השבוע הבא:</div>
             <div class="space-y-1.5">
               ${(data.logisticsSummary || []).map(item => `
@@ -3201,14 +3231,15 @@
       if (!lastGeneratedAiReport) return;
       const r = lastGeneratedAiReport;
       const lines = [
-        `*✨ לקט תובנות שטח "השיבנו דוכנים" — ${r.scopeLabel}*`,
+        `*✨ דוח הנהלה ותובנות שטח "השיבנו דוכנים" — ${r.scopeLabel}*`,
         '',
-        `*📊 סיכום:* ${r.summary || ''}`,
+        `*📊 תקציר מנהלים:* ${r.summary || ''}`,
         '',
         ...(r.standBreakdown?.length ? ['*📍 משתתפים לפי עמדות:*', ...r.standBreakdown.map(s => `• ${s}`), ''] : []),
-        '*💡 תובנות איכותניות:*',
+        '*💡 ניתוח איכותני ומגמות שטח:*',
         ...(r.qualitativeInsights || []).map(i => `• ${i}`),
         '',
+        ...(r.recommendations?.length ? ['*🎯 המלצות אופרטיביות:*', ...r.recommendations.map(i => `• ${i}`), ''] : []),
         '*📦 ריכוז לוגיסטי לשבוע הבא:*',
         ...(r.logisticsSummary || []).map(i => `• ${i}`)
       ].join('\n');

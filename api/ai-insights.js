@@ -1,7 +1,6 @@
 // ============================================================================
-// השיבנו דוכנים - Real AI Reflections & Logistics Insights API
-// Uses Google Gemini API (gemini-2.5-flash) when GEMINI_API_KEY is configured,
-// with a 100% real data-driven fallback (zero fake numbers) if key is missing.
+// השיבנו דוכנים - Executive AI Reflections & Logistics Insights API
+// Powered by Google Gemini 2.5 Flash (Executive Hebrew Analysis)
 // ============================================================================
 
 const crypto = require('crypto');
@@ -33,7 +32,7 @@ async function callGeminiJson(prompt) {
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.3,
+        temperature: 0.25,
         responseMimeType: 'application/json'
       }
     })
@@ -47,77 +46,24 @@ async function callGeminiJson(prompt) {
   return JSON.parse(text);
 }
 
-function localAnalyzeReflection(ref) {
-  const combined = `${ref.atmosphere || ''} ${ref.story || ''} ${ref.logistics || ''} ${ref.leads || ''}`;
-  const tags = [];
-  const rules = [
-    [/תפילין|ציצית|מזוזה/, 'מצוות מעשיות (תפילין/ציצית)'],
-    [/אמונה|השקפה|שאל|אלוקים|תורה/, 'שאלות באמונה והשקפה'],
-    [/שבת|קידוש|סעודה|אירוח/, 'אירוח ושמירת שבת'],
-    [/שיעור|חברותא|ללמוד|לימוד/, 'עניין בשיעורים ולימוד'],
-    [/לב|עומק|רגש|נפש|משמעות|בכה/, 'שיחת עומק וחיפוש משמעות'],
-    [/חסר|כיבוד|נרות|שולחן|שתייה|ציוד|שינוע|רכב|איחור|תקלה/, 'נושא לוגיסטי לטיפול']
-  ];
-  rules.forEach(([re, label]) => {
-    if (re.test(combined)) tags.push(label);
-  });
-  if (tags.length === 0) tags.push('פעילות שטח שוטפת');
-
-  const logisticsActions = [];
-  if (ref.logistics && ref.logistics.trim()) {
-    ref.logistics
-      .split(/\r?\n|[.;]+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 2)
-      .forEach(item => logisticsActions.push(`${ref.stand}: ${item}`));
-  }
-
-  const parts = [];
-  if (ref.youthCount) parts.push(`נרשמו ${ref.youthCount} משתתפים בעמדת ${ref.stand}.`);
-  if (ref.story) parts.push(`מוקד עיקרי: ${ref.story.slice(0, 140)}${ref.story.length > 140 ? '...' : ''}`);
-  else if (ref.atmosphere) parts.push(`אווירה בשטח: ${ref.atmosphere.slice(0, 140)}${ref.atmosphere.length > 140 ? '...' : ''}`);
-
-  return {
-    aiTags: tags.slice(0, 4),
-    qualitativeInsight: parts.join(' ') || 'תועדה פעילות בעמדה.',
-    logisticsActions,
-    mode: 'local_fallback'
-  };
-}
-
-function localWeeklyReport(refs) {
+function buildStats(refs) {
   const totalParticipants = refs.reduce((sum, r) => sum + (parseInt(r.youthCount) || 0), 0);
   const byStand = {};
-  const logisticsSummary = [];
-  const qualitativeInsights = [];
+  let leadsCount = 0;
 
   refs.forEach(r => {
     const st = r.stand || 'ללא עמדה';
     if (!byStand[st]) byStand[st] = { count: 0, participants: 0 };
     byStand[st].count++;
     byStand[st].participants += (parseInt(r.youthCount) || 0);
-
-    if (r.logistics && r.logistics.trim()) {
-      logisticsSummary.push(`${st}${r.interviewee ? ' (' + r.interviewee + ')' : ''}: ${r.logistics.trim()}`);
-    }
-    if (r.story && r.story.trim()) {
-      qualitativeInsights.push(`${st}: ${r.story.trim().slice(0, 180)}${r.story.trim().length > 180 ? '...' : ''}`);
-    } else if (r.atmosphere && r.atmosphere.trim()) {
-      qualitativeInsights.push(`${st}: ${r.atmosphere.trim().slice(0, 180)}`);
-    }
+    if (r.leads && r.leads.trim()) leadsCount++;
   });
 
   const standBreakdown = Object.entries(byStand)
     .sort((a, b) => b[1].participants - a[1].participants)
     .map(([name, info]) => `${name}: ${info.participants} משתתפים (${info.count} רפלקציות)`);
 
-  return {
-    summary: `הוזנו ${refs.length} רפלקציות עם סה"כ ${totalParticipants} משתתפים ב-${Object.keys(byStand).length} עמדות.`,
-    standBreakdown,
-    qualitativeInsights: qualitativeInsights.slice(0, 6),
-    logisticsSummary: logisticsSummary.length > 0 ? logisticsSummary : ['לא דווחו חוסרים או תקלות לוגיסטיות ברפלקציות שנבחרו.'],
-    mode: 'local_fallback'
-  };
+  return { totalParticipants, standsCount: Object.keys(byStand).length, leadsCount, standBreakdown };
 }
 
 module.exports = async function handler(req, res) {
@@ -135,33 +81,39 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ ok: false, error: 'נדרשת התחברות למערכת.' });
   }
 
+  if (!GEMINI_API_KEY) {
+    return res.status(503).json({ ok: false, error: 'מפתח GEMINI_API_KEY לא מוגדר בשרת.' });
+  }
+
   const { action, reflection, reflections, scopeLabel } = req.body || {};
 
   try {
     if (action === 'analyze_reflection') {
       if (!reflection) return res.status(400).json({ ok: false, error: 'חסרים נתוני רפלקציה.' });
 
-      if (!GEMINI_API_KEY) {
-        return res.status(200).json({ ok: true, ...localAnalyzeReflection(reflection) });
-      }
+      const prompt = `אתה יועץ ארגוני בכיר ומנהל הערכה ומדידה (Evaluation & Field Analytics) של מיזם "השיבנו דוכנים" — מערך דוכני שיח, זהות וקירוב לבבות בימי חמישי בלילה.
+עליך לנתח את רפלקציית המשמרת שלהלן בשפה עברית רשמית, מקצועית, חדה, עניינית ועשירה (לא חזרה שטחית על הטקסט ולא סיסמאות ריקות!).
+התבסס אך ורק על העובדות שבטקסט. אל תמציא פרטים שלא נכתבו.
 
-      const prompt = `אתה אנליסט שטח חכם של ארגון "השיבנו דוכנים" (דוכני שיח וקירוב לבבות בימי חמישי בלילה).
-נתח את הרפלקציה הבאה בעברית בלבד והחזר JSON תקני במבנה המדויק:
+החזר JSON תקני במבנה המדויק הבא:
 {
-  "aiTags": ["2 עד 4 תגיות נושא קצרות וברורות בעברית"],
-  "qualitativeInsight": "תובנה איכותנית תמציתית ומדויקת (1-2 משפטים) על מה שקרה בשטח ומה כדאי ללמוד/לשמר",
-  "logisticsActions": ["רשימת משימות או חוסרים לוגיסטיים קונקרטיים לטיפול מהטקסט, או מערך ריק אם אין"]
+  "aiTags": ["3 עד 4 תגיות נושא מקצועיות, מדויקות ורשמיות בעברית (2-4 מילים כל אחת), המייצגות את מוקדי השיח, מאפייני הקהל והיבטי השטח"],
+  "qualitativeInsight": "ניתוח איכותני מקצועי ורשמי בן 2 עד 3 משפטים: מהי הדינמיקה המרכזית שהתגלתה בעמדה, מה עבד היטב באינטראקציה עם המשתתפים, ומהי ההמלצה המקצועית לשימור או לדיוק לקראת המשמרת הבאה.",
+  "logisticsActions": ["רשימת משימות לוגיסטיות/תפעוליות קונקרטיות לטיפול בניסוח אופרטיבי מקצועי (למשל: 'השלמת מלאי כיבוד ונרות בעמדת ...'), רק אם עולה צורך לוגיסטי מהדיווח. אם אין צורך לוגיסטי — החזר מערך ריק []"]
 }
 
-נתוני הרפלקציה:
-עמדה: ${reflection.stand || ''}
-מרואיין/ת: ${reflection.interviewee || reflection.activists || ''}
-מספר משתתפים: ${reflection.youthCount || 0}
-שעות: ${reflection.hours || ''}
-אווירה וגזרה: ${reflection.atmosphere || ''}
-סיפור / שיחת עומק: ${reflection.story || ''}
-תשאול לוגיסטי: ${reflection.logistics || ''}
-משתתפים לליווי והמשך טיפול: ${reflection.leads || ''}`;
+נתוני המשמרת לניתוח:
+- עמדה: ${reflection.stand || 'לא צוין'}
+- תאריך/פרשה: ${reflection.date || 'לא צוין'}
+- מרואיין/ת: ${reflection.interviewee || reflection.activists || 'לא צוין'}
+- צוות במשמרת: ${reflection.activists || 'לא צוין'}
+- מספר משתתפים: ${reflection.youthCount || 0}
+- טווח גילאים: ${reflection.ageRange || 'לא צוין'}
+- שעות פעילות בפועל: ${reflection.hours || 'לא צוין'}
+- תיאור האווירה והגזרה: ${reflection.atmosphere || 'לא דווח'}
+- סיפור מרכזי / שיחת עומק: ${reflection.story || 'לא דווח'}
+- תשאול לוגיסטי: ${reflection.logistics || 'לא דווח'}
+- משתתפים לליווי והמשך קשר: ${reflection.leads || 'אין'}`;
 
       const result = await callGeminiJson(prompt);
       return res.status(200).json({
@@ -181,60 +133,60 @@ module.exports = async function handler(req, res) {
           summary: 'אין עדיין רפלקציות בסינון הנוכחי להפקת דוח.',
           standBreakdown: [],
           qualitativeInsights: [],
+          recommendations: [],
           logisticsSummary: [],
-          mode: GEMINI_API_KEY ? 'gemini' : 'local_fallback'
+          stats: { totalParticipants: 0, standsCount: 0, leadsCount: 0, reflectionsCount: 0 },
+          mode: 'gemini'
         });
       }
 
-      const baseStats = localWeeklyReport(list);
-      if (!GEMINI_API_KEY) {
-        return res.status(200).json({ ok: true, ...baseStats });
-      }
-
+      const stats = buildStats(list);
       const compactData = list.map((r, i) => (
-        `#${i + 1} | עמדה: ${r.stand} | תאריך: ${r.date} | מרואיין: ${r.interviewee || r.activists} | משתתפים: ${r.youthCount || 0}
-אווירה: ${r.atmosphere || '-'}
-סיפור/עומק: ${r.story || '-'}
-לוגיסטיקה: ${r.logistics || '-'}
-פניות לליווי: ${r.leads || '-'}`
-      )).join('\n---\n');
+        `רפלקציה #${i + 1} | עמדה: ${r.stand} | שבוע: ${r.date} | מרואיין/ת: ${r.interviewee || r.activists} | משתתפים: ${r.youthCount || 0} | גילאים: ${r.ageRange || '-'} | שעות: ${r.hours || '-'}
+אווירה וגזרה: ${r.atmosphere || 'לא צוין'}
+סיפור / שיחת עומק: ${r.story || 'לא צוין'}
+תשאול לוגיסטי: ${r.logistics || 'לא צוין'}
+פניות לליווי והמשך קשר: ${r.leads || 'אין'}`
+      )).join('\n====================\n');
 
-      const prompt = `אתה מנהל תובנות שטח של ארגון "השיבנו דוכנים".
-הפק דוח תובנות אמיתי ומבוסס אך ורק על הרפלקציות שלמטה (אסור להמציא שום מספר או עובדה שלא מופיעים בטקסט!).
-החזר JSON תקני בעברית במבנה המדויק:
+      const prompt = `אתה מנהל המחקר, התובנות והתפעול הבכיר של מיזם "השיבנו דוכנים".
+עליך להפיק דוח הנהלה רשמי, מקצועי, מובנה ומשוכלל בעברית תקנית גבוהה על בסיס הרפלקציות האמיתיות שלהלן בלבד.
+כלל ברזל: אין להמציא מספרים, עמדות או עובדות שאינם מופיעים בנתונים. נתח את הדפוסים לעומק והפק ערך ניהולי אמיתי.
+
+החזר JSON תקני במבנה המדויק הבא:
 {
-  "summary": "פסקת סיכום מנהלים קצרה (2-3 משפטים) על התמונה הכוללת",
-  "qualitativeInsights": ["3 עד 5 תובנות איכותניות חדות על דפוסים בשטח, עמדות בולטות ונקודות לשימור/שיפור"],
-  "logisticsSummary": ["רשימת פעולות לוגיסטיות קונקרטיות לטיפול לקראת השבוע הבא לפי עמדות, או משפט אחד אם לא דווחו בעיות"]
+  "summary": "תקציר מנהלים רשמי ומקיף (3-4 משפטים) המסכם את היקף הפעילות, אופי המפגשים, רוח השטח ורמת האפקטיביות של העמדות.",
+  "qualitativeInsights": ["4 עד 6 תובנות איכותניות מקצועיות ומעמיקות: דפוסים חוזרים בשיח המשתתפים, השוואה בין גזרות/עמדות, גורמי הצלחה בולטים ונקודות תורפה שזוהו בשטח."],
+  "recommendations": ["3 עד 4 המלצות אופרטיביות ומקצועיות להנהלה ולרכזים לקראת השבוע הבא (שיפור תדרוך פעילים, דיוק מיקום/שעות, העמקת הליווי למשתתפים)."],
+  "logisticsSummary": ["רשימת משימות לוגיסטיות קונקרטיות לטיפול לפי עמדה (בניסוח ברור ומוכן לביצוע), או ['לא דווחו פערים או תקלות לוגיסטיות ברפלקציות שנבדקו.'] אם אין."]
 }
 
 היקף הדוח: ${scopeLabel || 'רפלקציות נבחרות'}
-סה"כ רפלקציות: ${list.length}
-פילוח משתתפים אמיתי: ${baseStats.standBreakdown.join(' | ')}
+נתונים כמותיים אמיתיים:
+- סה"כ רפלקציות: ${list.length}
+- סה"כ משתתפים: ${stats.totalParticipants}
+- עמדות מדווחות: ${stats.standsCount}
+- רפלקציות עם פניות לליווי: ${stats.leadsCount}
+- פילוח לפי עמדות: ${stats.standBreakdown.join(' | ')}
 
-הרפלקציות:
+הרפלקציות הגולמיות מהשטח:
 ${compactData}`;
 
       const result = await callGeminiJson(prompt);
       return res.status(200).json({
         ok: true,
-        summary: result.summary || baseStats.summary,
-        standBreakdown: baseStats.standBreakdown,
-        qualitativeInsights: Array.isArray(result.qualitativeInsights) ? result.qualitativeInsights : baseStats.qualitativeInsights,
-        logisticsSummary: Array.isArray(result.logisticsSummary) ? result.logisticsSummary : baseStats.logisticsSummary,
+        summary: result.summary || '',
+        standBreakdown: stats.standBreakdown,
+        qualitativeInsights: Array.isArray(result.qualitativeInsights) ? result.qualitativeInsights : [],
+        recommendations: Array.isArray(result.recommendations) ? result.recommendations : [],
+        logisticsSummary: Array.isArray(result.logisticsSummary) ? result.logisticsSummary : [],
+        stats: { ...stats, reflectionsCount: list.length },
         mode: 'gemini'
       });
     }
 
     return res.status(400).json({ ok: false, error: 'פעולה לא מוכרת.' });
   } catch (err) {
-    // Graceful fallback with real data if Gemini fails
-    if (action === 'analyze_reflection' && reflection) {
-      return res.status(200).json({ ok: true, ...localAnalyzeReflection(reflection), warning: err.message });
-    }
-    if (action === 'weekly_report' && Array.isArray(reflections)) {
-      return res.status(200).json({ ok: true, ...localWeeklyReport(reflections), warning: err.message });
-    }
-    return res.status(500).json({ ok: false, error: err.message });
+    return res.status(500).json({ ok: false, error: `שגיאה במנוע ה-AI: ${err.message}` });
   }
 };
