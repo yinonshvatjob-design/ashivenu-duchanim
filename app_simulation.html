@@ -1076,12 +1076,21 @@
   <!-- Real AI Insights Report Modal -->
   <div id="modal-ai-report" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden border border-slate-200">
-      <div class="bg-slate-900 text-white p-4 flex items-center justify-between">
-        <div>
-          <h3 class="font-black text-base flex items-center gap-2"><span>✨</span><span>לקט תובנות וניתוח שטח (AI)</span></h3>
-          <div id="ai-report-subtitle" class="text-[11px] text-slate-300 mt-0.5">מנתח רפלקציות אמיתיות מהמאגר...</div>
+      <div class="bg-slate-900 text-white p-4 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-black text-base flex items-center gap-2"><span>✨</span><span>דוח הנהלה ותובנות שטח (AI)</span></h3>
+            <div id="ai-report-subtitle" class="text-[11px] text-slate-300 mt-0.5">מנתח רפלקציות אמיתיות מהמאגר...</div>
+          </div>
+          <button onclick="closeAiReportModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
         </div>
-        <button onclick="closeAiReportModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
+        <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-700/70 text-xs">
+          <span class="text-slate-300 font-semibold">בחר היקף דוח:</span>
+          <select id="ai-report-week-select" onchange="runAiReportForSelectedScope()" class="bg-slate-800 border border-slate-600 text-amber-400 font-bold px-2.5 py-1 rounded-lg outline-none flex-1 min-w-[180px]">
+            <option value="all">🌐 תובנות כוללות — כל השבועות</option>
+          </select>
+          <button onclick="runAiReportForSelectedScope()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1 rounded-lg transition shrink-0">🔄 הפק דוח</button>
+        </div>
       </div>
       <div id="ai-report-body" class="p-4 overflow-y-auto custom-scrollbar space-y-4 text-xs flex-1"></div>
       <div class="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
@@ -2924,7 +2933,7 @@
             </div>
 
             <div class="flex items-center gap-2 text-[11px] text-slate-400">
-              <button onclick="analyzeReflectionWithAI(${ref.id})" class="text-[10px] bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold px-2 py-0.5 rounded-lg transition">✨ נתח ב-AI</button>
+              <button id="ai-analyze-btn-${ref.id}" onclick="analyzeReflectionWithAI('${ref.id}')" class="text-[10px] bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold px-2.5 py-1 rounded-lg transition">✨ נתח ב-AI</button>
             </div>
           </div>
 
@@ -3068,8 +3077,13 @@
     }
 
     async function analyzeReflectionWithAI(refId, silent = false) {
-      const ref = reflectionsData.find(r => r.id === refId);
+      const ref = reflectionsData.find(r => String(r.id) === String(refId));
       if (!ref || !authToken) return;
+      const btn = document.getElementById(`ai-analyze-btn-${ref.id}`);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⏳ מנתח ב-AI...';
+      }
       try {
         const res = await fetch('/api/ai-insights', {
           method: 'POST',
@@ -3091,6 +3105,12 @@
         }
       } catch (err) {
         if (!silent) alert('שגיאת תקשורת מול שירות ה-AI');
+      } finally {
+        const b2 = document.getElementById(`ai-analyze-btn-${ref.id}`);
+        if (b2) {
+          b2.disabled = false;
+          b2.innerText = '✨ נתח ב-AI';
+        }
       }
     }
 
@@ -3124,16 +3144,40 @@
 
     async function generateAILearningReport() {
       const modal = document.getElementById('modal-ai-report');
+      const weekSel = document.getElementById('ai-report-week-select');
+      if (!modal) return;
+
+      if (weekSel) {
+        const uniqueDates = [...new Set(reflectionsData.map(r => r.date).filter(Boolean))];
+        const curWeekName = weeksList[currentWeekIndex] ? weeksList[currentWeekIndex].name : '';
+        weekSel.innerHTML = `<option value="all">🌐 תובנות כוללות — כל השבועות (${reflectionsData.length} רפלקציות)</option>` +
+          uniqueDates.map(d => {
+            const cnt = reflectionsData.filter(r => r.date === d).length;
+            return `<option value="${escapeHtml(d)}" ${d === curWeekName ? 'selected' : ''}>📅 שבוע: ${escapeHtml(d)} (${cnt} רפלקציות)</option>`;
+          }).join('');
+      }
+
+      modal.classList.remove('hidden');
+      await runAiReportForSelectedScope();
+    }
+
+    async function runAiReportForSelectedScope() {
       const body = document.getElementById('ai-report-body');
       const sub = document.getElementById('ai-report-subtitle');
       const modeBadge = document.getElementById('ai-report-mode-badge');
-      if (!modal || !body) return;
+      const weekSel = document.getElementById('ai-report-week-select');
+      if (!body) return;
 
+      const selectedWeek = weekSel ? weekSel.value : 'all';
       const filterStand = document.getElementById('reflection-filter-stand')?.value || 'all';
-      const list = reflectionsData.filter(r => filterStand === 'all' || r.stand === filterStand);
-      const scopeLabel = filterStand === 'all' ? `כל העמדות (${list.length} רפלקציות)` : `עמדת ${filterStand} (${list.length} רפלקציות)`;
+      const list = reflectionsData.filter(r =>
+        (filterStand === 'all' || r.stand === filterStand) &&
+        (selectedWeek === 'all' || r.date === selectedWeek)
+      );
+      const weekText = selectedWeek === 'all' ? 'כל השבועות (תובנות כוללות)' : `שבוע ${selectedWeek}`;
+      const standText = filterStand === 'all' ? 'כל העמדות' : `עמדת ${filterStand}`;
+      const scopeLabel = `${weekText} • ${standText} (${list.length} רפלקציות)`;
 
-      modal.classList.remove('hidden');
       if (sub) sub.innerText = `מנתח ${scopeLabel}...`;
       if (modeBadge) modeBadge.innerText = '';
       body.innerHTML = '<div class="text-center py-10 text-slate-500 font-bold">✨ מנתח רפלקציות אמיתיות ומפיק תובנות איכותניות ולוגיסטיות...</div>';
