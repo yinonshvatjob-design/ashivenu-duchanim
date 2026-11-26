@@ -1142,21 +1142,20 @@
         </div>
 
         <!-- Controls Toolbar -->
-        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-2 border-t border-purple-800/60 text-xs items-center">
-          <div class="sm:col-span-5 flex items-center gap-1.5">
+        <div class="space-y-2 pt-2 border-t border-purple-800/60 text-xs">
+          <div class="flex flex-wrap sm:flex-nowrap items-center gap-2">
             <span class="text-purple-200 font-semibold shrink-0">פרשת השבוע:</span>
-            <select id="parasha-sheet-week-select" onchange="runParashaSheetGeneration()" class="bg-slate-800 border border-purple-700 text-amber-300 font-bold px-2 py-1.5 rounded-lg outline-none w-full">
+            <select id="parasha-sheet-week-select" onchange="runParashaSheetGeneration()" class="bg-slate-800 border border-purple-700 text-amber-300 font-bold px-2.5 py-1.5 rounded-lg outline-none flex-1 min-w-[200px]">
               <!-- Rendered via JS -->
             </select>
-          </div>
-          <div class="sm:col-span-5 flex items-center gap-1.5">
-            <input type="text" id="parasha-sheet-custom-topic" placeholder="דגש מיוחד (אופציונלי, למשל: הקשבה לנוער סוער)" class="bg-slate-800 border border-purple-700 text-white px-2.5 py-1.5 rounded-lg outline-none w-full placeholder:text-slate-400 text-xs" />
-          </div>
-          <div class="sm:col-span-2 flex justify-end">
-            <button onclick="runParashaSheetGeneration()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold px-3 py-1.5 rounded-lg transition w-full flex items-center justify-center gap-1 shadow-xs">
+            <button id="parasha-sheet-generate-btn" onclick="runParashaSheetGeneration()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold px-4 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 shadow-xs shrink-0">
               <span>✨</span>
-              <span>חולל עלון</span>
+              <span>חולל עלון ב-AI</span>
             </button>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label for="parasha-sheet-custom-topic" class="text-[11px] text-purple-200 font-bold">💬 מסר / רעיון שתרצה להטמיע השבוע (ה-AI יבנה סביבו את הפרשה, הרב קוק, הרפלקציה והעצות):</label>
+            <textarea id="parasha-sheet-custom-topic" rows="2" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); runParashaSheetGeneration();}" placeholder="כתוב כאן מסר חופשי (למשל: הכנה למפגש עם אחים גם אם הם לא מוכרים לנו כמו יעקב ועשו, או כל נקודה חינוכית שתרצה להדגיש הערב)..." class="bg-slate-800 border border-purple-700 focus:border-amber-400 text-white px-3 py-2 rounded-lg outline-none w-full placeholder:text-slate-400 text-xs resize-none"></textarea>
           </div>
         </div>
       </div>
@@ -3769,6 +3768,13 @@
       }
     };
 
+    function formatParashaTitle(parasha) {
+      const p = String(parasha || '').trim();
+      if (!p) return 'פרשת השבוע';
+      if (p.startsWith('פרשת ') || p.startsWith('חול המועד')) return p;
+      return `פרשת ${p}`;
+    }
+
     function openParashaSheetModal() {
       const modal = document.getElementById('modal-parasha-sheet');
       const select = document.getElementById('parasha-sheet-week-select');
@@ -3777,7 +3783,7 @@
       if (select) {
         select.innerHTML = weeksList.map((w, idx) => `
           <option value="${idx}" ${idx === currentWeekIndex ? 'selected' : ''}>
-            📜 פרשת ${w.parasha} • ${w.date} (${w.label})
+            📜 ${formatParashaTitle(w.parasha)} • ${w.date} (${w.label})
           </option>
         `).join('');
       }
@@ -3796,36 +3802,48 @@
       const badge = document.getElementById('parasha-sheet-mode-badge');
       const select = document.getElementById('parasha-sheet-week-select');
       const customTopicInput = document.getElementById('parasha-sheet-custom-topic');
+      const genBtn = document.getElementById('parasha-sheet-generate-btn');
       if (!body) return;
 
       const selIdx = select ? parseInt(select.value) : currentWeekIndex;
       const selectedWeek = weeksList[selIdx] || weeksList[currentWeekIndex] || { parasha: 'פרשת וישלח', date: 'י\' כסלו • 26/11' };
+      const parashaTitle = formatParashaTitle(selectedWeek.parasha);
       const customTopic = customTopicInput ? customTopicInput.value.trim() : '';
+
+      if (genBtn) {
+        genBtn.disabled = true;
+        genBtn.innerHTML = '<span>⏳</span><span>מחולל...</span>';
+      }
+      if (badge) badge.innerHTML = '⏳ מתחבר למנוע ה-AI ומחולל עלון מקורי...';
 
       body.innerHTML = `
         <div class="text-center py-12 space-y-4">
           <div class="inline-block animate-spin text-3xl">📜</div>
-          <div class="font-extrabold text-slate-800 text-sm">יוצר דף הכנה שבועי מותאם אישית...</div>
+          <div class="font-extrabold text-slate-800 text-sm">יוצר דף הכנה שבועי מותאם אישית ל${escapeHtml(parashaTitle)}...</div>
+          ${customTopic ? `<div class="inline-block bg-purple-100 border border-purple-200 text-purple-950 font-bold text-xs px-3 py-1.5 rounded-xl max-w-lg">💬 משלב את המסר שלך: "${escapeHtml(customTopic)}"</div>` : ''}
           <div class="text-xs text-purple-700 max-w-md mx-auto">
-            מנוע הבינה המלאכותית מנתח את רפלקציות השטח שלכם, מאתר מקור אותנטי מכתבי מרן הראי"ה קוק זצ"ל, ויוצר גיליון פדגוגי חי ומעצים לקראת המשמרת.
+            מנוע ה-AI מנתח את רפלקציות השטח שלכם, מאתר מקור אותנטי מכתבי מרן הראי"ה קוק זצ"ל / חז"ל, ובונה גיליון פדגוגי חי ומעצים לקראת המשמרת.
           </div>
         </div>
       `;
 
-      // Filter reflections for context
       const relevantRefs = reflectionsData.length > 0 ? reflectionsData : [];
 
       try {
-        const token = localStorage.getItem('ashivenu_admin_token') || sessionStorage.getItem('ashivenu_admin_token') || '';
+        const token = authToken || sessionStorage.getItem('ashivenu_v2_token') || '';
+        if (!token) {
+          throw new Error('לא נמצא אסימון התחברות פעיל. יש להתחבר מחדש למערכת.');
+        }
+
         const res = await fetch('/api/ai-insights', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             action: 'parasha_reflection_sheet',
-            parasha: selectedWeek.parasha,
+            parasha: parashaTitle,
             parashaDate: selectedWeek.date,
             customTopic: customTopic,
             reflections: relevantRefs
@@ -3836,20 +3854,32 @@
         if (res.ok && data.ok && data.sheet) {
           lastGeneratedParashaSheet = {
             ...data.sheet,
-            parasha: selectedWeek.parasha,
+            parasha: parashaTitle,
             date: selectedWeek.date,
+            customTopic: customTopic,
             mode: 'gemini'
           };
-          if (badge) badge.innerHTML = '✨ הופק באמצעות Gemini 2.5 Flash • מקורות מבוססים ומדויקים';
+          if (badge) badge.innerHTML = `✨ חולל בזמן אמת ע"י Gemini AI${customTopic ? ' • מותאם למסר שלך' : ''}`;
           renderParashaSheetContent(lastGeneratedParashaSheet);
           return;
         }
-        throw new Error(data.error || 'תגובה לא תקינה מהשרת');
+        throw new Error(data.error || `שגיאת שרת (${res.status})`);
       } catch (err) {
-        console.warn('API error, falling back to pedagogical curated sheet:', err.message);
-        lastGeneratedParashaSheet = generateLocalFallbackParashaSheet(selectedWeek.parasha, selectedWeek.date, customTopic, relevantRefs);
-        if (badge) badge.innerHTML = '💡 הופק באמצעות מאגר פדגוגי מובנה של תורת הראי"ה ורפלקציות אמיתיות';
-        renderParashaSheetContent(lastGeneratedParashaSheet);
+        console.error('Parasha Sheet AI error:', err);
+        if (badge) badge.innerHTML = '⚠️ שגיאה בחיבור למנוע ה-AI';
+        body.innerHTML = `
+          <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-6 text-center space-y-3 max-w-lg mx-auto my-6">
+            <div class="text-3xl">⚠️</div>
+            <div class="font-black text-red-900 text-sm">לא ניתן היה לחולל את העלון דרך מנוע ה-AI</div>
+            <div class="text-xs text-red-700 font-medium">${escapeHtml(err.message)}</div>
+            <button onclick="runParashaSheetGeneration()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs transition">🔄 נסה שוב</button>
+          </div>
+        `;
+      } finally {
+        if (genBtn) {
+          genBtn.disabled = false;
+          genBtn.innerHTML = '<span>✨</span><span>חולל עלון ב-AI</span>';
+        }
       }
     }
 
@@ -3907,7 +3937,7 @@
           <div class="border-b-2 border-slate-900 pb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <div class="text-[11px] font-black uppercase tracking-wider text-purple-900">השיבנו — דוכני שיח, זהות וקירוב לבבות</div>
-              <h2 class="text-base sm:text-lg font-black text-slate-950 mt-0.5">דף הכנה פדגוגי למשמרת ליל שישי • פרשת ${escapeHtml(sheet.parasha)}</h2>
+              <h2 class="text-base sm:text-lg font-black text-slate-950 mt-0.5">דף הכנה פדגוגי למשמרת ליל שישי • ${escapeHtml(formatParashaTitle(sheet.parasha))}</h2>
               <div class="text-[11px] text-slate-500 font-semibold">${escapeHtml(sheet.date || '')} • מחזור פעילות תשפ"ז</div>
             </div>
             <div class="bg-purple-50 border border-purple-200 text-purple-950 font-bold px-3 py-1.5 rounded-xl text-xs text-center">
@@ -4038,7 +4068,7 @@
       if (!sheet) return;
 
       const lines = [
-        `*📜 דף הכנה שבועי לנציגי השטח — פרשת ${sheet.parasha}*`,
+        `*📜 דף הכנה שבועי לנציגי השטח — ${formatParashaTitle(sheet.parasha)}*`,
         `*השיבנו — דוכני שיח וזהות בירושלים*`,
         '',
         `*✨ ${sheet.title}*`,
@@ -4104,7 +4134,7 @@
           <div class="header-box">
             <div>
               <div class="inst-title">השיבנו — דוכני שיח וזהות יהודית בירושלים</div>
-              <div class="main-title">דף הכנה שבועי לנציגי השטח • פרשת ${escapeHtml(sheet.parasha)}</div>
+              <div class="main-title">דף הכנה שבועי לנציגי השטח • ${escapeHtml(formatParashaTitle(sheet.parasha))}</div>
               <div class="sub-meta">${escapeHtml(sheet.date || '')} • לקראת משמרת ליל שישי</div>
             </div>
             <div style="text-align: left; font-size: 10.5px; font-weight: bold; color: #581c87;">
