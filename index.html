@@ -236,8 +236,39 @@
             <button onclick="setActivistGenderFilter('female')" id="btn-gender-female" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">👩 נשים</button>
           </div>
           <div class="text-xs text-slate-500">
-            סה"כ: <strong id="total-activists-stat" class="text-slate-800 font-bold">0</strong>
+            מציג: <strong id="filtered-activists-stat" class="text-slate-900 font-bold">0</strong> / <strong id="total-activists-stat" class="text-slate-800 font-bold">0</strong>
           </div>
+        </div>
+      </div>
+
+      <!-- Weekly Availability & Assignment Sort / Filter Toolbar -->
+      <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="font-bold text-slate-600 text-[11px]">זמינות השבוע:</span>
+          <div class="flex flex-wrap items-center bg-white p-1 rounded-lg border border-slate-200 gap-1">
+            <button type="button" onclick="setActivistAvailFilter('all')" id="btn-avail-all" class="px-2 py-0.5 rounded-md font-bold bg-slate-900 text-white transition text-[11px]">הכל</button>
+            <button type="button" onclick="setActivistAvailFilter('verified')" id="btn-avail-verified" class="px-2 py-0.5 rounded-md font-semibold text-emerald-700 hover:bg-emerald-50 transition text-[11px]">✅ זמין לחמישי</button>
+            <button type="button" onclick="setActivistAvailFilter('tour')" id="btn-avail-tour" class="hidden px-2 py-0.5 rounded-md font-semibold text-purple-700 hover:bg-purple-50 transition text-[11px]">🚶 מגיע לסיור</button>
+            <button type="button" onclick="setActivistAvailFilter('pending')" id="btn-avail-pending" class="px-2 py-0.5 rounded-md font-semibold text-amber-700 hover:bg-amber-50 transition text-[11px]">⏳ טרם אישר</button>
+          </div>
+
+          <span class="font-bold text-slate-600 text-[11px] mr-1">שיבוץ:</span>
+          <div class="flex items-center bg-white p-1 rounded-lg border border-slate-200 gap-1">
+            <button type="button" onclick="setActivistAssignFilter('all')" id="btn-assign-all" class="px-2 py-0.5 rounded-md font-bold bg-slate-900 text-white transition text-[11px]">הכל</button>
+            <button type="button" onclick="setActivistAssignFilter('assigned')" id="btn-assign-assigned" class="px-2 py-0.5 rounded-md font-semibold text-blue-700 hover:bg-blue-50 transition text-[11px]">📍 משובצים</button>
+            <button type="button" onclick="setActivistAssignFilter('unassigned')" id="btn-assign-unassigned" class="px-2 py-0.5 rounded-md font-semibold text-slate-600 hover:bg-slate-100 transition text-[11px]">לא משובצים</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <label for="activist-sort-select" class="font-bold text-slate-600 text-[11px] shrink-0">↕️ סדר לפי:</label>
+          <select id="activist-sort-select" onchange="setActivistSort(this.value)" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-[11px] font-bold text-slate-800 outline-none focus:border-amber-500">
+            <option value="default">ברירת מחדל</option>
+            <option value="avail_desc">זמינות (✅ זמין ➔ 🚶 סיור ➔ ⏳ טרם אישר)</option>
+            <option value="avail_asc">זמינות (⏳ טרם אישר ➔ 🚶 סיור ➔ ✅ זמין)</option>
+            <option value="assigned_first">📍 משובצים השבוע תחילה</option>
+            <option value="unassigned_first">לא משובצים תחילה (זמינים בראש)</option>
+          </select>
         </div>
       </div>
 
@@ -1514,6 +1545,47 @@
       renderActivistsAccordion();
     }
 
+    let currentActivistAvailFilter = 'all'; // 'all' | 'verified' | 'tour' | 'pending'
+    let currentActivistAssignFilter = 'all'; // 'all' | 'assigned' | 'unassigned'
+    let currentActivistSort = 'default';
+
+    function setActivistAvailFilter(val) {
+      currentActivistAvailFilter = val;
+      const styles = {
+        all: ['bg-slate-900 text-white', 'text-slate-600 hover:bg-slate-100'],
+        verified: ['bg-emerald-600 text-white', 'text-emerald-700 hover:bg-emerald-50'],
+        tour: ['bg-purple-600 text-white', 'text-purple-700 hover:bg-purple-50'],
+        pending: ['bg-amber-500 text-slate-950', 'text-amber-700 hover:bg-amber-50']
+      };
+      ['all', 'verified', 'tour', 'pending'].forEach(k => {
+        const b = document.getElementById(`btn-avail-${k}`);
+        if (!b) return;
+        const hiddenCls = (k === 'tour' && currentActivistCategory !== 'potential') ? 'hidden ' : '';
+        b.className = `${hiddenCls}px-2 py-0.5 rounded-md transition text-[11px] ${k === val ? 'font-bold ' + styles[k][0] : 'font-semibold ' + styles[k][1]}`;
+      });
+      renderActivistsAccordion();
+    }
+
+    function setActivistAssignFilter(val) {
+      currentActivistAssignFilter = val;
+      const styles = {
+        all: ['bg-slate-900 text-white', 'text-slate-600 hover:bg-slate-100'],
+        assigned: ['bg-blue-600 text-white', 'text-blue-700 hover:bg-blue-50'],
+        unassigned: ['bg-slate-700 text-white', 'text-slate-600 hover:bg-slate-100']
+      };
+      ['all', 'assigned', 'unassigned'].forEach(k => {
+        const b = document.getElementById(`btn-assign-${k}`);
+        if (!b) return;
+        b.className = `px-2 py-0.5 rounded-md transition text-[11px] ${k === val ? 'font-bold ' + styles[k][0] : 'font-semibold ' + styles[k][1]}`;
+      });
+      renderActivistsAccordion();
+    }
+
+    function setActivistSort(val) {
+      currentActivistSort = val || 'default';
+      renderActivistsAccordion();
+    }
+
     function toggleActivistAccordion(actId) {
       if (openAccordionIds.has(actId)) {
         openAccordionIds.delete(actId);
@@ -1536,10 +1608,46 @@
       const container = document.getElementById('activists-accordion-container');
       const search = document.getElementById('activist-search').value.trim().toLowerCase();
 
+      // Show 'מגיע לסיור' filter button ONLY in potential tab
+      const tourFilterBtn = document.getElementById('btn-avail-tour');
+      if (tourFilterBtn) {
+        if (currentActivistCategory === 'potential') {
+          tourFilterBtn.classList.remove('hidden');
+        } else {
+          tourFilterBtn.classList.add('hidden');
+          if (currentActivistAvailFilter === 'tour') {
+            currentActivistAvailFilter = 'all';
+            const allBtn = document.getElementById('btn-avail-all');
+            if (allBtn) allBtn.className = 'px-2 py-0.5 rounded-md transition text-[11px] font-bold bg-slate-900 text-white';
+          }
+        }
+      }
+
+      // Get current week assignments & weekId upfront for filtering & sorting
+      const currentRoster = getCurrentWeekRoster();
+      const currentWeekId = getCurrentWeekId();
+
       let filtered = activistsData.filter(a => a.category === currentActivistCategory);
 
       if (currentActivistGenderFilter !== 'all') {
         filtered = filtered.filter(a => (a.gender || 'male') === currentActivistGenderFilter);
+      }
+
+      if (currentActivistAvailFilter !== 'all') {
+        filtered = filtered.filter(a => {
+          const st = getActivistAvailabilityStateForWeek(a, currentWeekId, currentRoster);
+          if (currentActivistAvailFilter === 'verified') return st === true;
+          if (currentActivistAvailFilter === 'tour') return st === 'tour';
+          if (currentActivistAvailFilter === 'pending') return st === false;
+          return true;
+        });
+      }
+
+      if (currentActivistAssignFilter !== 'all') {
+        filtered = filtered.filter(a => {
+          const isAss = isActivistAssignedInRoster(a.id, currentRoster);
+          return currentActivistAssignFilter === 'assigned' ? isAss : !isAss;
+        });
       }
 
       if (search) {
@@ -1551,12 +1659,47 @@
         );
       }
 
+      // Sort according to selected sort option
+      if (currentActivistSort !== 'default') {
+        const availRankDesc = (a) => {
+          const st = getActivistAvailabilityStateForWeek(a, currentWeekId, currentRoster);
+          return st === true ? 0 : st === 'tour' ? 1 : 2;
+        };
+        const availRankAsc = (a) => {
+          const st = getActivistAvailabilityStateForWeek(a, currentWeekId, currentRoster);
+          return st === false ? 0 : st === 'tour' ? 1 : 2;
+        };
+        filtered = [...filtered].sort((a, b) => {
+          if (currentActivistSort === 'avail_desc') {
+            return availRankDesc(a) - availRankDesc(b);
+          }
+          if (currentActivistSort === 'avail_asc') {
+            return availRankAsc(a) - availRankAsc(b);
+          }
+          if (currentActivistSort === 'assigned_first') {
+            const aAss = isActivistAssignedInRoster(a.id, currentRoster) ? 0 : 1;
+            const bAss = isActivistAssignedInRoster(b.id, currentRoster) ? 0 : 1;
+            if (aAss !== bAss) return aAss - bAss;
+            return availRankDesc(a) - availRankDesc(b);
+          }
+          if (currentActivistSort === 'unassigned_first') {
+            const aAss = isActivistAssignedInRoster(a.id, currentRoster) ? 1 : 0;
+            const bAss = isActivistAssignedInRoster(b.id, currentRoster) ? 1 : 0;
+            if (aAss !== bAss) return aAss - bAss;
+            return availRankDesc(a) - availRankDesc(b);
+          }
+          return 0;
+        });
+      }
+
       const existingCount = activistsData.filter(a => a.category === 'existing').length;
       const potentialCount = activistsData.filter(a => a.category === 'potential').length;
       document.getElementById('badge-existing-count').innerText = existingCount;
       document.getElementById('badge-potential-count').innerText = potentialCount;
       document.getElementById('badge-activists-count').innerText = activistsData.length;
       document.getElementById('total-activists-stat').innerText = activistsData.length;
+      const filteredStatEl = document.getElementById('filtered-activists-stat');
+      if (filteredStatEl) filteredStatEl.innerText = filtered.length;
 
       if (filtered.length === 0) {
         container.innerHTML = `
@@ -1569,10 +1712,6 @@
         `;
         return;
       }
-
-      // Get current week assignments & weekId
-      const currentRoster = getCurrentWeekRoster();
-      const currentWeekId = getCurrentWeekId();
 
       container.innerHTML = filtered.map(act => {
         const isOpen = openAccordionIds.has(act.id);
