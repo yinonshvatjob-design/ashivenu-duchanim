@@ -269,6 +269,7 @@
             <option value="assigned_first">📍 משובצים השבוע תחילה</option>
             <option value="unassigned_first">לא משובצים תחילה (זמינים בראש)</option>
           </select>
+          <button type="button" onclick="renderActivistsAccordion(false)" class="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold px-2 py-1 rounded-lg text-[11px] transition shrink-0" title="החל מחדש מיון וסינון על הרשימה">🔄 סדר מחדש</button>
         </div>
       </div>
 
@@ -1548,6 +1549,7 @@
     let currentActivistAvailFilter = 'all'; // 'all' | 'verified' | 'tour' | 'pending'
     let currentActivistAssignFilter = 'all'; // 'all' | 'assigned' | 'unassigned'
     let currentActivistSort = 'default';
+    let lastRenderedActivistIds = [];
 
     function setActivistAvailFilter(val) {
       currentActivistAvailFilter = val;
@@ -1592,7 +1594,7 @@
       } else {
         openAccordionIds.add(actId);
       }
-      renderActivistsAccordion();
+      renderActivistsAccordion(true);
     }
 
     function expandAllActivists(expand) {
@@ -1601,10 +1603,10 @@
       } else {
         openAccordionIds.clear();
       }
-      renderActivistsAccordion();
+      renderActivistsAccordion(true);
     }
 
-    function renderActivistsAccordion() {
+    function renderActivistsAccordion(preserveOrder = false) {
       const container = document.getElementById('activists-accordion-container');
       const search = document.getElementById('activist-search').value.trim().toLowerCase();
 
@@ -1627,69 +1629,80 @@
       const currentRoster = getCurrentWeekRoster();
       const currentWeekId = getCurrentWeekId();
 
-      let filtered = activistsData.filter(a => a.category === currentActivistCategory);
+      let filtered;
+      if (preserveOrder && lastRenderedActivistIds.length > 0) {
+        // Keep exact same activists in exact same positions so clicking status never makes a row jump away!
+        const byId = new Map(activistsData.map(a => [a.id, a]));
+        filtered = lastRenderedActivistIds
+          .map(id => byId.get(id))
+          .filter(a => a && a.category === currentActivistCategory);
+      } else {
+        filtered = activistsData.filter(a => a.category === currentActivistCategory);
 
-      if (currentActivistGenderFilter !== 'all') {
-        filtered = filtered.filter(a => (a.gender || 'male') === currentActivistGenderFilter);
-      }
+        if (currentActivistGenderFilter !== 'all') {
+          filtered = filtered.filter(a => (a.gender || 'male') === currentActivistGenderFilter);
+        }
 
-      if (currentActivistAvailFilter !== 'all') {
-        filtered = filtered.filter(a => {
-          const st = getActivistAvailabilityStateForWeek(a, currentWeekId, currentRoster);
-          if (currentActivistAvailFilter === 'verified') return st === true;
-          if (currentActivistAvailFilter === 'tour') return st === 'tour';
-          if (currentActivistAvailFilter === 'pending') return st === false;
-          return true;
-        });
-      }
+        if (currentActivistAvailFilter !== 'all') {
+          filtered = filtered.filter(a => {
+            const st = getActivistAvailabilityStateForWeek(a, currentWeekId, currentRoster);
+            if (currentActivistAvailFilter === 'verified') return st === true;
+            if (currentActivistAvailFilter === 'tour') return st === 'tour';
+            if (currentActivistAvailFilter === 'pending') return st === false;
+            return true;
+          });
+        }
 
-      if (currentActivistAssignFilter !== 'all') {
-        filtered = filtered.filter(a => {
-          const isAss = isActivistAssignedInRoster(a.id, currentRoster);
-          return currentActivistAssignFilter === 'assigned' ? isAss : !isAss;
-        });
-      }
+        if (currentActivistAssignFilter !== 'all') {
+          filtered = filtered.filter(a => {
+            const isAss = isActivistAssignedInRoster(a.id, currentRoster);
+            return currentActivistAssignFilter === 'assigned' ? isAss : !isAss;
+          });
+        }
 
-      if (search) {
-        filtered = filtered.filter(a => 
-          a.name.toLowerCase().includes(search) || 
-          a.phone.includes(search) || 
-          (a.notes && a.notes.toLowerCase().includes(search)) ||
-          (a.preferredStand && a.preferredStand.toLowerCase().includes(search))
-        );
-      }
+        if (search) {
+          filtered = filtered.filter(a => 
+            a.name.toLowerCase().includes(search) || 
+            a.phone.includes(search) || 
+            (a.notes && a.notes.toLowerCase().includes(search)) ||
+            (a.preferredStand && a.preferredStand.toLowerCase().includes(search))
+          );
+        }
 
-      // Sort according to selected sort option
-      if (currentActivistSort !== 'default') {
-        const availRankDesc = (a) => {
-          const st = getActivistAvailabilityStateForWeek(a, currentWeekId, currentRoster);
-          return st === true ? 0 : st === 'tour' ? 1 : 2;
-        };
-        const availRankAsc = (a) => {
-          const st = getActivistAvailabilityStateForWeek(a, currentWeekId, currentRoster);
-          return st === false ? 0 : st === 'tour' ? 1 : 2;
-        };
-        filtered = [...filtered].sort((a, b) => {
-          if (currentActivistSort === 'avail_desc') {
-            return availRankDesc(a) - availRankDesc(b);
-          }
-          if (currentActivistSort === 'avail_asc') {
-            return availRankAsc(a) - availRankAsc(b);
-          }
-          if (currentActivistSort === 'assigned_first') {
-            const aAss = isActivistAssignedInRoster(a.id, currentRoster) ? 0 : 1;
-            const bAss = isActivistAssignedInRoster(b.id, currentRoster) ? 0 : 1;
-            if (aAss !== bAss) return aAss - bAss;
-            return availRankDesc(a) - availRankDesc(b);
-          }
-          if (currentActivistSort === 'unassigned_first') {
-            const aAss = isActivistAssignedInRoster(a.id, currentRoster) ? 1 : 0;
-            const bAss = isActivistAssignedInRoster(b.id, currentRoster) ? 1 : 0;
-            if (aAss !== bAss) return aAss - bAss;
-            return availRankDesc(a) - availRankDesc(b);
-          }
-          return 0;
-        });
+        // Sort according to selected sort option
+        if (currentActivistSort !== 'default') {
+          const availRankDesc = (a) => {
+            const st = getActivistAvailabilityStateForWeek(a, currentWeekId, currentRoster);
+            return st === true ? 0 : st === 'tour' ? 1 : 2;
+          };
+          const availRankAsc = (a) => {
+            const st = getActivistAvailabilityStateForWeek(a, currentWeekId, currentRoster);
+            return st === false ? 0 : st === 'tour' ? 1 : 2;
+          };
+          filtered = [...filtered].sort((a, b) => {
+            if (currentActivistSort === 'avail_desc') {
+              return availRankDesc(a) - availRankDesc(b);
+            }
+            if (currentActivistSort === 'avail_asc') {
+              return availRankAsc(a) - availRankAsc(b);
+            }
+            if (currentActivistSort === 'assigned_first') {
+              const aAss = isActivistAssignedInRoster(a.id, currentRoster) ? 0 : 1;
+              const bAss = isActivistAssignedInRoster(b.id, currentRoster) ? 0 : 1;
+              if (aAss !== bAss) return aAss - bAss;
+              return availRankDesc(a) - availRankDesc(b);
+            }
+            if (currentActivistSort === 'unassigned_first') {
+              const aAss = isActivistAssignedInRoster(a.id, currentRoster) ? 1 : 0;
+              const bAss = isActivistAssignedInRoster(b.id, currentRoster) ? 1 : 0;
+              if (aAss !== bAss) return aAss - bAss;
+              return availRankDesc(a) - availRankDesc(b);
+            }
+            return 0;
+          });
+        }
+
+        lastRenderedActivistIds = filtered.map(a => a.id);
       }
 
       const existingCount = activistsData.filter(a => a.category === 'existing').length;
@@ -2056,7 +2069,7 @@
         nextState = !currentState;
       }
       setActivistVerifiedForWeek(actId, nextState, weekId);
-      renderActivistsAccordion();
+      renderActivistsAccordion(true);
       syncStateToServer();
     }
 
