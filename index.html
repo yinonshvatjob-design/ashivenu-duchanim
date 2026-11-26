@@ -309,9 +309,9 @@
         
         <!-- Live Side List -->
         <div class="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col max-h-[260px] lg:max-h-full lg:h-full shadow-xs">
-          <div class="font-bold text-xs text-slate-700 pb-2 border-b border-slate-100 flex items-center justify-between">
+          <div class="font-bold text-xs text-slate-700 pb-2 border-b border-slate-100 flex items-center justify-between gap-1">
             <span>רשימת עמדות ומוקדים</span>
-            <span class="text-[10px] text-slate-400">עריכה, מיקוד ושיבוץ</span>
+            <button type="button" id="map-list-sort-btn" onclick="toggleMapListSortOrder()" class="text-[10px] bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-lg transition cursor-pointer" title="לחץ להחלפת כיוון המיון לפי סטטוס">↕️ 🔴➔🟠➔🟢</button>
           </div>
 
           <div id="map-stand-list" class="space-y-2 mt-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
@@ -2249,6 +2249,17 @@
       return { maleLead, femaleLead: null };
     }
 
+    let mapListSortMode = 'red_first'; // 'red_first' (🔴->🟠->🟢) | 'green_first' (🟢->🟠->🔴)
+
+    function toggleMapListSortOrder() {
+      mapListSortMode = mapListSortMode === 'red_first' ? 'green_first' : 'red_first';
+      const btn = document.getElementById('map-list-sort-btn');
+      if (btn) {
+        btn.innerText = mapListSortMode === 'red_first' ? '↕️ 🔴➔🟠➔🟢' : '↕️ 🟢➔🟠➔🔴';
+      }
+      updateMapMarkers();
+    }
+
     function updateMapMarkers() {
       const allCountEl = document.getElementById('map-filter-all-count');
       const standCountEl = document.getElementById('map-filter-stand-count');
@@ -2265,16 +2276,31 @@
       const currentRoster = getCurrentWeekRoster();
       let listHtml = '';
 
-      standsData.forEach(stand => {
-        if (currentMapFilter !== 'all' && stand.type !== currentMapFilter) return;
+      // Compute status rank for each stand and sort by status (Red -> Amber -> Green, or reversed)
+      const enrichedStands = standsData
+        .filter(stand => currentMapFilter === 'all' || stand.type === currentMapFilter)
+        .map(stand => {
+          const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
+          const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
+          const { maleLead } = getStandLeads(stand, sData);
+          const hasAnyLead = Boolean(maleLead);
+          const isGreen = assigned.length >= stand.requiredActivists && hasAnyLead;
+          const isAmber = !isGreen && assigned.length > 0;
+          const statusColor = isGreen ? '#10b981' : isAmber ? '#f59e0b' : '#ef4444';
+          // 0 = Red (needs attention), 1 = Amber (partial), 2 = Green (full)
+          const statusRank = isGreen ? 2 : isAmber ? 1 : 0;
+          return { stand, sData, assigned, maleLead, hasAnyLead, statusColor, statusRank };
+        })
+        .sort((a, b) => {
+          if (a.statusRank !== b.statusRank) {
+            return mapListSortMode === 'green_first'
+              ? (b.statusRank - a.statusRank)
+              : (a.statusRank - b.statusRank);
+          }
+          return (a.stand.name || '').localeCompare(b.stand.name || '', 'he');
+        });
 
-        const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
-        const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
-        const { maleLead } = getStandLeads(stand, sData);
-        const hasAnyLead = Boolean(maleLead);
-
-        // Status color calculation
-        const statusColor = assigned.length >= stand.requiredActivists && hasAnyLead ? '#10b981' : assigned.length > 0 ? '#f59e0b' : '#ef4444';
+      enrichedStands.forEach(({ stand, sData, assigned, maleLead, statusColor }) => {
 
         const coords = Array.isArray(stand.coords) && stand.coords.length === 2 ? stand.coords : [31.7815, 35.2175];
         if (leafletMapInstance) {
