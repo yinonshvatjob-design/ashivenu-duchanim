@@ -1417,6 +1417,18 @@
           }
         });
       }
+      if (Array.isArray(activistsData)) {
+        const activeWeekId = (weeksList[getAutoCurrentWeekIndex()] && weeksList[getAutoCurrentWeekIndex()].id) || 'w-2026-11-26';
+        activistsData.forEach(a => {
+          if (a && !a.weeklySmsVerified) {
+            a.weeklySmsVerified = {};
+            if (a.smsVerified === true) {
+              a.weeklySmsVerified[activeWeekId] = true;
+            }
+            migrated = true;
+          }
+        });
+      }
       return migrated;
     }
 
@@ -1557,8 +1569,9 @@
         return;
       }
 
-      // Get current week assignments
+      // Get current week assignments & weekId
       const currentRoster = getCurrentWeekRoster();
+      const currentWeekId = getCurrentWeekId();
 
       container.innerHTML = filtered.map(act => {
         const isOpen = openAccordionIds.has(act.id);
@@ -1566,19 +1579,27 @@
         const genderLabel = isFemale ? '👩 אישה' : '👨 גבר';
         const leadTitle = isFemale ? 'אחראית' : 'אחראי';
         
-        // Find if assigned to any stand in the current week
+        // Find if assigned to any stand (or shift inside a stand) in the current week
         let assignedStandName = null;
         let isLeadThisWeek = false;
         for (const [sId, sData] of Object.entries(currentRoster)) {
-          if (sData.assignedIds && sData.assignedIds.includes(act.id)) {
+          if (!sData) continue;
+          const inStandAssigned = Array.isArray(sData.assignedIds) && sData.assignedIds.includes(act.id);
+          const inShifts = sData.hasShifts && Array.isArray(sData.shifts) && sData.shifts.some(sh => (Array.isArray(sh.assignedIds) && sh.assignedIds.includes(act.id)) || sh.leadId === act.id);
+          if (inStandAssigned || inShifts) {
             const standObj = standsData.find(s => s.id === sId);
             if (standObj) assignedStandName = standObj.name;
-            if (sData.leadMaleId === act.id || sData.leadFemaleId === act.id || sData.leadId === act.id) {
+            if (
+              sData.leadMaleId === act.id || sData.leadFemaleId === act.id || sData.leadId === act.id ||
+              (sData.hasShifts && Array.isArray(sData.shifts) && sData.shifts.some(sh => sh.leadId === act.id))
+            ) {
               isLeadThisWeek = true;
             }
             break;
           }
         }
+
+        const isVerifiedThisWeek = isActivistVerifiedForWeek(act, currentWeekId, currentRoster);
 
         return `
           <div class="bg-white rounded-2xl border ${isOpen ? 'border-amber-400/80 shadow-md ring-1 ring-amber-400/20' : 'border-slate-200/80 shadow-xs hover:border-slate-300'} transition overflow-hidden">
@@ -1617,8 +1638,8 @@
               <!-- Quick Badges & Arrow -->
               <div class="flex items-center gap-2 sm:gap-3 text-xs">
                 
-                <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${act.smsVerified ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-50 hover:bg-emerald-50 text-amber-800 hover:text-emerald-800 border-amber-300 hover:border-emerald-300'}" title="${act.smsVerified ? 'לחץ להחלפה ל: טרם אישר' : 'לחץ לאישור מהיר: זמין לחמישי'}">
-                  <span>${act.smsVerified ? '✅ זמין לחמישי' : '⏳ טרם אישר'}</span>
+                <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${isVerifiedThisWeek ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-50 hover:bg-emerald-50 text-amber-800 hover:text-emerald-800 border-amber-300 hover:border-emerald-300'}" title="${isVerifiedThisWeek ? 'לחץ להחלפה ל: טרם אישר (לשבוע זה)' : 'לחץ לאישור מהיר: זמין לחמישי (לשבוע זה)'}">
+                  <span>${isVerifiedThisWeek ? '✅ זמין לחמישי' : '⏳ טרם אישר'}</span>
                 </button>
 
                 ${assignedStandName ? `
@@ -1658,12 +1679,12 @@
                   <div class="bg-white p-3 rounded-xl border border-slate-200/60 space-y-1.5">
                     <div class="flex items-center justify-between gap-2">
                       <span class="text-[10px] font-bold text-slate-400">זמינות לליל שישי הקרוב:</span>
-                      <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[10.5px] font-bold px-2 py-0.5 rounded-lg border transition cursor-pointer ${act.smsVerified ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-700'}">
-                        ${act.smsVerified ? '↩ סמן טרם אישר' : '✅ סמן זמין לחמישי'}
+                      <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[10.5px] font-bold px-2 py-0.5 rounded-lg border transition cursor-pointer ${isVerifiedThisWeek ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-700'}">
+                        ${isVerifiedThisWeek ? '↩ סמן טרם אישר' : '✅ סמן זמין לחמישי'}
                       </button>
                     </div>
-                    <div class="font-semibold ${act.smsVerified ? 'text-emerald-700' : 'text-amber-700'}">
-                      ${act.smsVerified ? 'זמין ואישר הגעה למשמרת' : 'טרם אישר זמינות השבוע'}
+                    <div class="font-semibold ${isVerifiedThisWeek ? 'text-emerald-700' : 'text-amber-700'}">
+                      ${isVerifiedThisWeek ? (assignedStandName ? 'זמין ואישר (משובץ השבוע בעמדה)' : 'זמין ואישר הגעה למשמרת') : 'טרם אישר זמינות השבוע'}
                     </div>
                     <div class="text-[10px] text-slate-500 pt-1">
                       מספר נייד: <span class="font-mono" dir="ltr">${act.phone || 'לא הוזן'}</span>
@@ -1818,11 +1839,54 @@
       renderModalActivistNotesLog(act);
     }
 
+    function getCurrentWeekId() {
+      return (weeksList[currentWeekIndex] && weeksList[currentWeekIndex].id) || 'w-2026-11-26';
+    }
+
+    function isActivistAssignedInRoster(actId, roster) {
+      if (!roster) return false;
+      for (const sData of Object.values(roster)) {
+        if (!sData) continue;
+        if (Array.isArray(sData.assignedIds) && sData.assignedIds.includes(actId)) return true;
+        if (sData.hasShifts && Array.isArray(sData.shifts)) {
+          if (sData.shifts.some(sh => (Array.isArray(sh.assignedIds) && sh.assignedIds.includes(actId)) || sh.leadId === actId)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function isActivistVerifiedForWeek(act, weekId = getCurrentWeekId(), roster = getCurrentWeekRoster()) {
+      if (!act) return false;
+      if (act.weeklySmsVerified && Object.prototype.hasOwnProperty.call(act.weeklySmsVerified, weekId)) {
+        return Boolean(act.weeklySmsVerified[weekId]);
+      }
+      // אם הפעיל משובץ בעמדה (או במשמרת) באותו שבוע — אוטומטית מסומן כזמין/אישר!
+      if (isActivistAssignedInRoster(act.id, roster)) {
+        return true;
+      }
+      // בכל שבוע חדש (החל מיום ראשון כשהשבוע מתחלף אוטומטית) — מתאפס אוטומטית ל"טרם אישר"
+      return false;
+    }
+
+    function setActivistVerifiedForWeek(actId, verified, weekId = getCurrentWeekId()) {
+      const act = activistsData.find(a => a.id === actId);
+      if (!act) return;
+      if (!act.weeklySmsVerified || typeof act.weeklySmsVerified !== 'object') {
+        act.weeklySmsVerified = {};
+      }
+      act.weeklySmsVerified[weekId] = Boolean(verified);
+      act.smsVerified = Boolean(verified);
+    }
+
     function toggleActivistThursdayAvailability(actId, evt) {
       if (evt) evt.stopPropagation();
       const act = activistsData.find(a => a.id === actId);
       if (!act) return;
-      act.smsVerified = !act.smsVerified;
+      const weekId = getCurrentWeekId();
+      const currentVal = isActivistVerifiedForWeek(act, weekId, getCurrentWeekRoster());
+      setActivistVerifiedForWeek(actId, !currentVal, weekId);
       renderActivistsAccordion();
       syncStateToServer();
     }
@@ -1838,7 +1902,7 @@
       document.getElementById('edit-act-category').value = act.category;
       document.getElementById('edit-act-phone').value = act.phone || '';
       document.getElementById('edit-act-email').value = act.email || '';
-      document.getElementById('edit-act-sms').value = act.smsVerified ? 'true' : 'false';
+      document.getElementById('edit-act-sms').value = isActivistVerifiedForWeek(act) ? 'true' : 'false';
       document.getElementById('edit-act-status').value = act.status;
       document.getElementById('edit-act-preferred-stand').value = act.preferredStand || '';
       const newNoteInp = document.getElementById('modal-new-note-input');
@@ -1863,7 +1927,7 @@
       act.category = document.getElementById('edit-act-category').value;
       act.phone = document.getElementById('edit-act-phone').value.trim();
       act.email = document.getElementById('edit-act-email').value.trim();
-      act.smsVerified = document.getElementById('edit-act-sms').value === 'true';
+      setActivistVerifiedForWeek(act.id, document.getElementById('edit-act-sms').value === 'true');
       act.status = document.getElementById('edit-act-status').value;
       act.preferredStand = document.getElementById('edit-act-preferred-stand').value;
 
@@ -2483,7 +2547,11 @@
         if (val && !sData.assignedIds.includes(val)) {
           sData.assignedIds.push(val);
         }
+        if (val) {
+          setActivistVerifiedForWeek(val, true);
+        }
         renderStandsRoster();
+        renderActivistsAccordion();
         syncStateToServer();
       }
     }
@@ -3118,6 +3186,9 @@
       if (!sData.assignedIds.includes(picked.id)) {
         sData.assignedIds.push(picked.id);
       }
+
+      // Auto-mark activist as confirmed/available for this week when assigned to a stand
+      setActivistVerifiedForWeek(picked.id, true);
 
       renderAssignModalList();
       renderStandsRoster();
