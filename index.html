@@ -960,6 +960,7 @@
       </div>
 
       <input type="hidden" id="assign-modal-stand-id">
+      <input type="hidden" id="assign-modal-shift-id">
 
       <!-- Search & Gender Filter -->
       <div class="space-y-2 shrink-0">
@@ -1006,7 +1007,7 @@
 
       <div class="space-y-3.5 text-xs">
         
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block font-bold text-slate-700 mb-1">עמדה *</label>
             <select id="modal-ref-stand" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
@@ -1019,7 +1020,16 @@
           </div>
 
           <div>
-            <label class="block font-bold text-slate-700 mb-1">פעילים שלקחו חלק במשמרת *</label>
+            <label class="block font-bold text-slate-700 mb-1">משמרת בעמדה</label>
+            <select id="modal-ref-shift" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
+              <option value="all">משמרת מלאה (כל הערב)</option>
+              <option value="shift-1">משמרת א׳ (21:00-23:00)</option>
+              <option value="shift-2">משמרת ב׳ (23:00-01:00)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">פעילים במשמרת *</label>
             <input type="text" id="modal-ref-activists" placeholder="יוסף ויסמן, אביתר כהן" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-500">
           </div>
         </div>
@@ -2252,6 +2262,8 @@
             leadFemaleId: data.leadFemaleId || null,
             leadId: data.leadId || null,
             assignedIds: [...(data.assignedIds || [])],
+            hasShifts: Boolean(data.hasShifts),
+            shifts: data.shifts ? JSON.parse(JSON.stringify(data.shifts)) : null,
             note: 'הועתק כברירת מחדל משבוע שעבר'
           };
         }
@@ -2261,6 +2273,143 @@
         syncStateToServer();
         alert(`השיבוץ מ-${prevWeek.name} שוכפל בהצלחה לשבוע ${currentWeek.name}!`);
       }
+    }
+
+    // --- Stand Multi-Shift Management Helpers ---
+    function toggleStandShifts(standId) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      if (!sData) return;
+
+      if (sData.hasShifts) {
+        if (confirm('האם לאחד חזרה את העמדה למשמרת אחת רגילה?')) {
+          sData.hasShifts = false;
+          renderStandsRoster();
+          renderActivistsAccordion();
+          syncStateToServer();
+        }
+        return;
+      }
+
+      // Activate multi-shift mode (Default: Shift 1 = 21:00-23:00, Shift 2 = 23:00-01:00)
+      sData.hasShifts = true;
+      if (!Array.isArray(sData.shifts) || sData.shifts.length === 0) {
+        sData.shifts = [
+          {
+            id: 'shift-1',
+            name: 'משמרת א׳',
+            hours: '21:00-23:00',
+            leadId: sData.leadId || sData.leadMaleId || null,
+            leadContactStatus: sData.leadContactStatus || null,
+            assignedIds: [...(sData.assignedIds || [])]
+          },
+          {
+            id: 'shift-2',
+            name: 'משמרת ב׳',
+            hours: '23:00-01:00',
+            leadId: null,
+            leadContactStatus: null,
+            assignedIds: []
+          }
+        ];
+      }
+      renderStandsRoster();
+      renderActivistsAccordion();
+      syncStateToServer();
+    }
+
+    function addStandShift(standId) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      if (!sData) return;
+      if (!Array.isArray(sData.shifts)) sData.shifts = [];
+      const idx = sData.shifts.length + 1;
+      const letters = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳'];
+      const shiftName = `משמרת ${letters[idx - 1] || idx}`;
+      sData.shifts.push({
+        id: `shift-${Date.now()}`,
+        name: shiftName,
+        hours: '23:00-01:00',
+        leadId: null,
+        leadContactStatus: null,
+        assignedIds: []
+      });
+      renderStandsRoster();
+      syncStateToServer();
+    }
+
+    function removeStandShift(standId, shiftId) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      if (!sData || !sData.shifts) return;
+      if (sData.shifts.length <= 1) {
+        toggleStandShifts(standId);
+        return;
+      }
+      if (confirm('האם למחוק משמרת זו מהעמדה?')) {
+        sData.shifts = sData.shifts.filter(sh => sh.id !== shiftId);
+        renderStandsRoster();
+        syncStateToServer();
+      }
+    }
+
+    function updateShiftHours(standId, shiftId, hours) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      if (!sData || !sData.shifts) return;
+      const sh = sData.shifts.find(s => s.id === shiftId);
+      if (sh) {
+        sh.hours = hours.trim();
+        syncStateToServer();
+      }
+    }
+
+    function updateShiftLead(standId, shiftId, leadId) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      if (!sData || !sData.shifts) return;
+      const sh = sData.shifts.find(s => s.id === shiftId);
+      if (sh) {
+        const val = leadId ? parseInt(leadId) : null;
+        sh.leadId = val;
+        if (val && !sh.assignedIds.includes(val)) {
+          sh.assignedIds.unshift(val);
+        }
+        if (val && !sData.assignedIds.includes(val)) {
+          sData.assignedIds.push(val);
+        }
+        renderStandsRoster();
+        syncStateToServer();
+      }
+    }
+
+    function setShiftLeadContactStatus(standId, shiftId, status) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      if (!sData || !sData.shifts) return;
+      const sh = sData.shifts.find(s => s.id === shiftId);
+      if (!sh) return;
+      sh.leadContactStatus = (sh.leadContactStatus === status) ? null : status;
+      sh.leadContactUpdatedAt = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+      renderStandsRoster();
+      syncStateToServer();
+    }
+
+    function unassignActivistFromShift(standId, shiftId, actId) {
+      const currentRoster = getCurrentWeekRoster();
+      const sData = currentRoster[standId];
+      if (!sData || !sData.shifts) return;
+      const sh = sData.shifts.find(s => s.id === shiftId);
+      if (!sh) return;
+      sh.assignedIds = sh.assignedIds.filter(id => id !== actId);
+      if (sh.leadId === actId) sh.leadId = null;
+      const appearsInOther = sData.shifts.some(other => other.assignedIds.includes(actId));
+      if (!appearsInOther) {
+        sData.assignedIds = sData.assignedIds.filter(id => id !== actId);
+      }
+      renderStandsRoster();
+      renderActivistsAccordion();
+      syncStateToServer();
     }
 
     function renderStandsRoster() {
@@ -2298,9 +2447,10 @@
         const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
         const { maleLead } = getStandLeads(stand, sData);
         const hasAnyLead = Boolean(maleLead);
+        const hasShifts = Boolean(sData.hasShifts && Array.isArray(sData.shifts) && sData.shifts.length > 0);
 
         return `
-          <div id="stand-card-${stand.id}" class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between space-y-4">
+          <div id="stand-card-${stand.id}" class="bg-white rounded-2xl border ${hasShifts ? 'border-purple-300 shadow-sm' : 'border-slate-200/80'} p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between space-y-4">
             
             <!-- Stand Header -->
             <div>
@@ -2315,60 +2465,133 @@
                     <span>${stand.address || stand.city || ''}</span>
                     <span class="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5 text-[11px] text-slate-700">
                       <span>⏰</span>
-                      <input type="text" value="${escapeHtml(stand.hours || '')}" onchange="updateStandHoursInline('${stand.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}" placeholder="שעת פעילות..." class="bg-transparent outline-none w-24 text-[11px] font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-normal" dir="ltr" title="ערוך שעת פעילות">
+                      <input type="text" value="${escapeHtml(stand.hours || '')}" onchange="updateStandHoursInline('${stand.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}" placeholder="שעת פעילות..." class="bg-transparent outline-none w-24 text-[11px] font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-normal" dir="ltr" title="ערוך שעת פעילות כוללת">
                     </span>
                   </div>
                 </div>
 
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                  assigned.length >= stand.requiredActivists && hasAnyLead ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                  assigned.length > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                  'bg-red-50 text-red-700 border border-red-200'
-                }">
-                  ${assigned.length >= stand.requiredActivists ? 'מאויש מלא ✓' : `חסר ${Math.max(1, stand.requiredActivists - assigned.length)} פעילים`}
-                </span>
+                <div class="flex flex-col items-end gap-1 shrink-0">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                    assigned.length >= stand.requiredActivists && hasAnyLead ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                    assigned.length > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                    'bg-red-50 text-red-700 border border-red-200'
+                  }">
+                    ${assigned.length >= stand.requiredActivists ? 'מאויש מלא ✓' : `חסר ${Math.max(1, stand.requiredActivists - assigned.length)} פעילים`}
+                  </span>
+                  
+                  <!-- Toggle Shifts Button -->
+                  <button onclick="toggleStandShifts('${stand.id}')" class="text-[10.5px] font-bold px-2 py-0.5 rounded-lg border transition ${hasShifts ? 'bg-purple-100 text-purple-900 border-purple-300 hover:bg-purple-200' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-purple-50 hover:text-purple-800'}">
+                    ${hasShifts ? '↩ משמרת אחת' : '⏰ פצל למשמרות'}
+                  </button>
+                </div>
               </div>
 
-              <!-- Permanent Male Lead Box -->
-              <div class="mt-3 bg-amber-50/60 border border-amber-200/70 rounded-xl p-2 text-xs space-y-1.5">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-amber-900 font-bold text-[11px]">⭐ אחראי קבוע:</span>
-                  <div class="flex items-center gap-1.5">
-                    ${maleLead ? `
-                      <button onclick="setStandLeadContactStatus('${stand.id}', 'answered')" class="px-1.5 py-0.5 rounded text-[10px] font-bold transition border ${sData.leadContactStatus === 'answered' ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white/80 text-slate-500 border-slate-200 hover:text-emerald-700'}" title="${sData.leadContactStatus === 'answered' && sData.leadContactUpdatedAt ? 'ענה • ' + sData.leadContactUpdatedAt : 'סמן ענה'}">✓ ענה</button>
-                      <button onclick="setStandLeadContactStatus('${stand.id}', 'no_answer')" class="px-1.5 py-0.5 rounded text-[10px] font-bold transition border ${sData.leadContactStatus === 'no_answer' ? 'bg-red-600 text-white border-red-700' : 'bg-white/80 text-slate-500 border-slate-200 hover:text-red-700'}" title="${sData.leadContactStatus === 'no_answer' && sData.leadContactUpdatedAt ? 'לא ענה • ' + sData.leadContactUpdatedAt : 'סמן לא ענה'}">✕ לא ענה</button>
-                    ` : ''}
-                    ${maleLead && maleLead.phone ? `<a href="tel:${maleLead.phone}" class="text-slate-600 hover:text-slate-900 font-mono text-[10px] underline decoration-amber-400" dir="ltr">${maleLead.phone}</a>` : ''}
+              ${hasShifts ? `
+                <!-- ================= MULTI-SHIFT DISPLAY ================= -->
+                <div class="mt-3 space-y-2.5">
+                  <div class="flex items-center justify-between text-[11px] font-extrabold text-purple-950 bg-purple-50/80 px-2.5 py-1 rounded-lg border border-purple-200">
+                    <span>👥 חלוקת משמרות לעמדה (${sData.shifts.length} משמרות):</span>
+                    <button onclick="addStandShift('${stand.id}')" class="text-purple-700 hover:text-purple-950 font-black">+ הוסף משמרת</button>
                   </div>
-                </div>
-                <select onchange="setPermanentStandLead('${stand.id}', this.value)" class="w-full bg-white border border-amber-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-amber-400">
-                  <option value="">-- טרם מונה אחראי קבוע --</option>
-                  ${maleActivists.map(a => `<option value="${a.id}" ${maleLead && maleLead.id === a.id ? 'selected' : ''}>👨 ${a.name}</option>`).join('')}
-                </select>
-              </div>
 
-              <!-- Assigned Activists List -->
-              <div class="mt-3 space-y-1.5">
-                <div class="text-[11px] font-bold text-slate-600 flex items-center justify-between">
-                  <span>פעילים משובצים לשבוע זה (${assigned.length}):</span>
-                  <button onclick="openAssignModal('${stand.id}', '${stand.name}')" class="text-blue-600 hover:underline font-bold">+ שבץ פעיל/ה</button>
-                </div>
+                  ${sData.shifts.map((sh, sIdx) => {
+                    const shAssigned = activistsData.filter(a => sh.assignedIds && sh.assignedIds.includes(a.id));
+                    const shLead = activistsData.find(a => a.id === sh.leadId) || null;
+                    return `
+                      <div class="bg-gradient-to-l from-slate-50 to-purple-50/40 border border-purple-200/90 rounded-xl p-2.5 space-y-2 text-xs">
+                        <div class="flex items-center justify-between gap-1 border-b border-purple-100 pb-1.5">
+                          <div class="flex items-center gap-1.5">
+                            <span class="font-black text-purple-900 text-xs">${escapeHtml(sh.name || `משמרת ${sIdx + 1}`)}</span>
+                            <span class="inline-flex items-center gap-1 bg-white border border-purple-200 rounded px-1.5 py-0.5 text-[10px] text-purple-900 font-mono" dir="ltr">
+                              <span>⏰</span>
+                              <input type="text" value="${escapeHtml(sh.hours || (sIdx === 0 ? '21:00-23:00' : '23:00-01:00'))}" onchange="updateShiftHours('${stand.id}', '${sh.id}', this.value)" class="bg-transparent outline-none w-20 text-[10px] font-bold text-slate-800" title="ערוך שעות משמרת">
+                            </span>
+                          </div>
+                          <div class="flex items-center gap-1">
+                            <button onclick="openAssignModal('${stand.id}', '${escapeHtml(stand.name)}', '${sh.id}')" class="text-[10px] bg-purple-700 hover:bg-purple-600 text-white font-bold px-2 py-0.5 rounded shadow-2xs">+ שבץ למשמרת</button>
+                            ${sData.shifts.length > 1 ? `<button onclick="removeStandShift('${stand.id}', '${sh.id}')" class="text-slate-400 hover:text-red-600 text-[11px] px-1" title="מחק משמרת">✕</button>` : ''}
+                          </div>
+                        </div>
 
-                ${assigned.map(a => {
-                  const isFemale = a.gender === 'female';
-                  return `
-                    <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
-                      <div class="flex items-center gap-1.5">
-                        <span class="text-[11px]">${isFemale ? '👩' : '👨'}</span>
-                        <span class="font-medium text-slate-800">${a.name}</span>
+                        <!-- Shift Lead Box -->
+                        <div class="bg-white/90 border border-purple-200/80 rounded-lg p-1.5 space-y-1">
+                          <div class="flex items-center justify-between gap-1">
+                            <span class="text-purple-950 font-bold text-[10.5px]">⭐ אחראי משמרת:</span>
+                            <div class="flex items-center gap-1">
+                              ${shLead ? `
+                                <button onclick="setShiftLeadContactStatus('${stand.id}', '${sh.id}', 'answered')" class="px-1 py-0.2 rounded text-[9.5px] font-bold transition border ${sh.leadContactStatus === 'answered' ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white text-slate-500 border-slate-200 hover:text-emerald-700'}">✓ ענה</button>
+                                <button onclick="setShiftLeadContactStatus('${stand.id}', '${sh.id}', 'no_answer')" class="px-1 py-0.2 rounded text-[9.5px] font-bold transition border ${sh.leadContactStatus === 'no_answer' ? 'bg-red-600 text-white border-red-700' : 'bg-white text-slate-500 border-slate-200 hover:text-red-700'}">✕ לא ענה</button>
+                              ` : ''}
+                              ${shLead && shLead.phone ? `<a href="tel:${shLead.phone}" class="text-slate-600 hover:text-slate-900 font-mono text-[9.5px] underline decoration-purple-400" dir="ltr">${shLead.phone}</a>` : ''}
+                            </div>
+                          </div>
+                          <select onchange="updateShiftLead('${stand.id}', '${sh.id}', this.value)" class="w-full bg-slate-50 border border-purple-200 rounded px-2 py-1 text-[11px] font-medium text-slate-800 outline-none">
+                            <option value="">-- בחר אחראי למשמרת זו --</option>
+                            ${maleActivists.map(a => `<option value="${a.id}" ${shLead && shLead.id === a.id ? 'selected' : ''}>👨 ${a.name}</option>`).join('')}
+                          </select>
+                        </div>
+
+                        <!-- Shift Assigned Activists -->
+                        <div class="space-y-1">
+                          <div class="text-[10px] font-bold text-slate-500">נציגים במשמרת (${shAssigned.length}):</div>
+                          <div class="flex flex-wrap gap-1">
+                            ${shAssigned.map(a => `
+                              <span class="inline-flex items-center gap-1 bg-white border border-purple-200 text-slate-800 px-2 py-0.5 rounded-md text-[10.5px]">
+                                <span>${a.gender === 'female' ? '👩' : '👨'}</span>
+                                <span class="font-semibold">${a.name}</span>
+                                <button onclick="unassignActivistFromShift('${stand.id}', '${sh.id}', ${a.id})" class="text-red-500 hover:text-red-700 font-bold mr-1">✕</button>
+                              </span>
+                            `).join('') || '<span class="text-[10px] text-slate-400 italic">טרם שובצו נציגים למשמרת זו</span>'}
+                          </div>
+                        </div>
+
                       </div>
-                      <div class="flex items-center gap-2">
-                        <button onclick="unassignActivistInWeek('${stand.id}', ${a.id})" class="text-red-500 hover:text-red-700 font-bold text-xs" title="הסר מעמדה">✕</button>
-                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              ` : `
+                <!-- ================= SINGLE SHIFT DISPLAY ================= -->
+                <!-- Permanent Male Lead Box -->
+                <div class="mt-3 bg-amber-50/60 border border-amber-200/70 rounded-xl p-2 text-xs space-y-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-amber-900 font-bold text-[11px]">⭐ אחראי עמדה:</span>
+                    <div class="flex items-center gap-1.5">
+                      ${maleLead ? `
+                        <button onclick="setStandLeadContactStatus('${stand.id}', 'answered')" class="px-1.5 py-0.5 rounded text-[10px] font-bold transition border ${sData.leadContactStatus === 'answered' ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white/80 text-slate-500 border-slate-200 hover:text-emerald-700'}" title="${sData.leadContactStatus === 'answered' && sData.leadContactUpdatedAt ? 'ענה • ' + sData.leadContactUpdatedAt : 'סמן ענה'}">✓ ענה</button>
+                        <button onclick="setStandLeadContactStatus('${stand.id}', 'no_answer')" class="px-1.5 py-0.5 rounded text-[10px] font-bold transition border ${sData.leadContactStatus === 'no_answer' ? 'bg-red-600 text-white border-red-700' : 'bg-white/80 text-slate-500 border-slate-200 hover:text-red-700'}" title="${sData.leadContactStatus === 'no_answer' && sData.leadContactUpdatedAt ? 'לא ענה • ' + sData.leadContactUpdatedAt : 'סמן לא ענה'}">✕ לא ענה</button>
+                      ` : ''}
+                      ${maleLead && maleLead.phone ? `<a href="tel:${maleLead.phone}" class="text-slate-600 hover:text-slate-900 font-mono text-[10px] underline decoration-amber-400" dir="ltr">${maleLead.phone}</a>` : ''}
                     </div>
-                  `;
-                }).join('') || '<div class="text-xs text-slate-400 italic p-2 bg-slate-50 rounded-lg">אין פעילים משובצים לעמדה זו בשבוע הנבחר</div>'}
-              </div>
+                  </div>
+                  <select onchange="setPermanentStandLead('${stand.id}', this.value)" class="w-full bg-white border border-amber-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-amber-400">
+                    <option value="">-- טרם מונה אחראי קבוע --</option>
+                    ${maleActivists.map(a => `<option value="${a.id}" ${maleLead && maleLead.id === a.id ? 'selected' : ''}>👨 ${a.name}</option>`).join('')}
+                  </select>
+                </div>
+
+                <!-- Assigned Activists List -->
+                <div class="mt-3 space-y-1.5">
+                  <div class="text-[11px] font-bold text-slate-600 flex items-center justify-between">
+                    <span>פעילים משובצים לשבוע זה (${assigned.length}):</span>
+                    <button onclick="openAssignModal('${stand.id}', '${stand.name}')" class="text-blue-600 hover:underline font-bold">+ שבץ פעיל/ה</button>
+                  </div>
+
+                  ${assigned.map(a => {
+                    const isFemale = a.gender === 'female';
+                    return `
+                      <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                        <div class="flex items-center gap-1.5">
+                          <span class="text-[11px]">${isFemale ? '👩' : '👨'}</span>
+                          <span class="font-medium text-slate-800">${a.name}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <button onclick="unassignActivistInWeek('${stand.id}', ${a.id})" class="text-red-500 hover:text-red-700 font-bold text-xs" title="הסר מעמדה">✕</button>
+                        </div>
+                      </div>
+                    `;
+                  }).join('') || '<div class="text-xs text-slate-400 italic p-2 bg-slate-50 rounded-lg">אין פעילים משובצים לעמדה זו בשבוע הנבחר</div>'}
+                </div>
+              `}
 
               <!-- Live Evening Status Notes Log (Timestamped & High-Visibility Highlight) -->
               <div class="mt-3.5 ${ensureStandNotesLog(sData).length > 0 ? 'bg-gradient-to-l from-yellow-200 via-amber-100 to-orange-100 border-2 border-amber-400 shadow-sm' : 'bg-yellow-50/90 border border-amber-300'} rounded-xl p-2.5 text-xs space-y-2">
@@ -2411,6 +2634,20 @@
                     </div>
                   </div>
                 ` : '';
+
+                if (hasShifts) {
+                  return existingHtml + `
+                    <div class="grid grid-cols-2 gap-1.5">
+                      ${sData.shifts.map((sh, idx) => `
+                        <button onclick="openReflectionForStand('${stand.id}', '', '${sh.id}')" class="bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold text-[10.5px] px-2 py-1.5 rounded-lg transition flex items-center justify-center gap-1">
+                          <span>📝</span>
+                          <span>רפלקציה ${escapeHtml(sh.name || `משמרת ${idx + 1}`)}</span>
+                        </button>
+                      `).join('')}
+                    </div>
+                  `;
+                }
+
                 return existingHtml + `
                   <button onclick="openReflectionForStand('${stand.id}')" class="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 w-full justify-center">
                     <span>📝</span>
@@ -2427,13 +2664,22 @@
 
     let assignGenderFilter = 'all';
 
-    function openAssignModal(standId, standName) {
+    function openAssignModal(standId, standName, shiftId = null) {
       const currentRoster = getCurrentWeekRoster();
       if (!currentRoster[standId]) {
         currentRoster[standId] = { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
       }
+      const sData = currentRoster[standId];
       document.getElementById('assign-modal-stand-id').value = standId;
-      document.getElementById('assign-modal-stand-name').innerText = standName;
+      const shiftInput = document.getElementById('assign-modal-shift-id');
+      if (shiftInput) shiftInput.value = shiftId || '';
+
+      let titleStr = standName;
+      if (shiftId && sData.shifts) {
+        const sh = sData.shifts.find(s => s.id === shiftId);
+        if (sh) titleStr += ` • ${sh.name} (${sh.hours})`;
+      }
+      document.getElementById('assign-modal-stand-name').innerText = titleStr;
       document.getElementById('assign-modal-search').value = '';
       setAssignGenderFilter('all');
       document.getElementById('modal-assign-activist').classList.remove('hidden');
@@ -2458,12 +2704,19 @@
 
     function renderAssignModalList() {
       const standId = document.getElementById('assign-modal-stand-id').value;
+      const shiftId = document.getElementById('assign-modal-shift-id')?.value || null;
       const search = document.getElementById('assign-modal-search').value.trim().toLowerCase();
       const listEl = document.getElementById('assign-modal-list');
       const currentRoster = getCurrentWeekRoster();
       const sData = currentRoster[standId] || { assignedIds: [] };
 
-      let available = activistsData.filter(a => !sData.assignedIds.includes(a.id));
+      let excludedIds = sData.assignedIds;
+      if (shiftId && sData.shifts) {
+        const sh = sData.shifts.find(s => s.id === shiftId);
+        if (sh) excludedIds = sh.assignedIds || [];
+      }
+
+      let available = activistsData.filter(a => !excludedIds.includes(a.id));
       if (assignGenderFilter !== 'all') {
         available = available.filter(a => (a.gender || 'male') === assignGenderFilter);
       }
@@ -2623,6 +2876,7 @@
       const listHtml = sorted.map(({ stand, sData, assigned, req, maleLead, isFull }) => {
         const isNoAnswer = sData.leadContactStatus === 'no_answer';
         const isAnswered = sData.leadContactStatus === 'answered';
+        const hasShifts = Boolean(sData.hasShifts && Array.isArray(sData.shifts) && sData.shifts.length > 0);
         const statusCls = isFull
           ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
           : assigned.length > 0
@@ -2633,12 +2887,13 @@
         const cleanPhone = maleLead && maleLead.phone ? maleLead.phone.replace(/[^0-9]/g, '') : '';
 
         return `
-          <div class="bg-white rounded-xl border ${isNoAnswer ? 'border-red-300 border-r-4 border-r-red-600' : isFull ? 'border-slate-200 border-r-4 border-r-emerald-500' : 'border-slate-200 border-r-4 border-r-amber-400'} p-2.5 shadow-2xs space-y-1.5">
+          <div class="bg-white rounded-xl border ${hasShifts ? 'border-purple-300 border-r-4 border-r-purple-600' : isNoAnswer ? 'border-red-300 border-r-4 border-r-red-600' : isFull ? 'border-slate-200 border-r-4 border-r-emerald-500' : 'border-slate-200 border-r-4 border-r-amber-400'} p-2.5 shadow-2xs space-y-1.5">
             <!-- Row 1: Time + Name + Staffing Badge -->
             <div class="flex items-center justify-between gap-2">
               <div onclick="openStandCardFromDashboard('${stand.id}')" class="flex items-center gap-1.5 min-w-0 cursor-pointer">
                 <span class="text-[11px] font-mono font-extrabold bg-slate-900 text-amber-400 px-1.5 py-0.5 rounded shrink-0" dir="ltr">${escapeHtml((stand.hours || '--:--').split('-')[0].trim())}</span>
                 <span class="font-extrabold text-sm text-slate-900 truncate">${escapeHtml(stand.name)}</span>
+                ${hasShifts ? `<span class="bg-purple-100 text-purple-900 text-[10px] font-bold px-1.5 py-0.2 rounded border border-purple-200">משמרות</span>` : ''}
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
                 <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${statusCls}">
@@ -2648,29 +2903,51 @@
               </div>
             </div>
 
-            <!-- Row 2: Lead + Quick Contact + Answer Toggle -->
-            <div class="flex flex-wrap items-center justify-between gap-1.5 text-[11px] pt-1 border-t border-slate-100">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span class="text-slate-600 truncate">⭐ <strong>${maleLead ? escapeHtml(maleLead.name) : 'ללא אחראי'}</strong></span>
-                ${maleLead && maleLead.phone ? `
-                  <a href="tel:${maleLead.phone}" class="bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded text-[10px]" title="חייג">📞</a>
-                  <a href="https://wa.me/972${cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone}" target="_blank" class="bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded text-[10px]" title="וואטסאפ">💬</a>
+            ${hasShifts ? `
+              <!-- Multi-Shifts Summary in Dashboard -->
+              <div class="space-y-1.5 pt-1 border-t border-purple-100">
+                ${sData.shifts.map((sh, sIdx) => {
+                  const shLead = activistsData.find(a => a.id === sh.leadId);
+                  const shAssigned = activistsData.filter(a => sh.assignedIds && sh.assignedIds.includes(a.id));
+                  return `
+                    <div class="flex items-center justify-between gap-2 bg-purple-50/60 p-1.5 rounded-lg text-[11px]">
+                      <div class="flex items-center gap-1.5 truncate">
+                        <span class="font-bold text-purple-950">${escapeHtml(sh.name || `משמרת ${sIdx + 1}`)} (${escapeHtml(sh.hours || '')}):</span>
+                        <span class="text-slate-700">⭐ ${shLead ? escapeHtml(shLead.name) : '<span class="text-amber-700 font-semibold">ללא אחראי</span>'}</span>
+                      </div>
+                      <div class="flex items-center gap-1 shrink-0">
+                        <span class="font-mono text-[10px] text-purple-900 bg-white border border-purple-200 px-1 rounded">${shAssigned.length} נציגים</span>
+                        <button onclick="openAssignModal('${stand.id}', '${escapeHtml(stand.name)}', '${sh.id}')" class="text-[9.5px] bg-purple-700 text-white font-bold px-1.5 py-0.5 rounded">+ שבץ</button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : `
+              <!-- Row 2: Lead + Quick Contact + Answer Toggle -->
+              <div class="flex flex-wrap items-center justify-between gap-1.5 text-[11px] pt-1 border-t border-slate-100">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="text-slate-600 truncate">⭐ <strong>${maleLead ? escapeHtml(maleLead.name) : 'ללא אחראי'}</strong></span>
+                  ${maleLead && maleLead.phone ? `
+                    <a href="tel:${maleLead.phone}" class="bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded text-[10px]" title="חייג">📞</a>
+                    <a href="https://wa.me/972${cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone}" target="_blank" class="bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded text-[10px]" title="וואטסאפ">💬</a>
+                  ` : ''}
+                </div>
+                ${maleLead ? `
+                  <div class="flex items-center gap-1 shrink-0">
+                    <button onclick="setStandLeadContactStatus('${stand.id}', 'answered')" class="px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${isAnswered ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white text-slate-500 border-slate-200'}">✓ ענה</button>
+                    <button onclick="setStandLeadContactStatus('${stand.id}', 'no_answer')" class="px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${isNoAnswer ? 'bg-red-600 text-white border-red-700' : 'bg-white text-slate-500 border-slate-200'}">✕ לא ענה</button>
+                  </div>
                 ` : ''}
               </div>
-              ${maleLead ? `
-                <div class="flex items-center gap-1 shrink-0">
-                  <button onclick="setStandLeadContactStatus('${stand.id}', 'answered')" class="px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${isAnswered ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white text-slate-500 border-slate-200'}">✓ ענה</button>
-                  <button onclick="setStandLeadContactStatus('${stand.id}', 'no_answer')" class="px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${isNoAnswer ? 'bg-red-600 text-white border-red-700' : 'bg-white text-slate-500 border-slate-200'}">✕ לא ענה</button>
+
+              <!-- Row 3: Assigned names summary (compact) -->
+              ${assigned.length > 0 ? `
+                <div class="text-[10.5px] text-slate-600 leading-snug">
+                  👥 ${assigned.map(a => escapeHtml(a.name)).join(' • ')}
                 </div>
               ` : ''}
-            </div>
-
-            <!-- Row 3: Assigned names summary (compact) -->
-            ${assigned.length > 0 ? `
-              <div class="text-[10.5px] text-slate-600 leading-snug">
-                👥 ${assigned.map(a => escapeHtml(a.name)).join(' • ')}
-              </div>
-            ` : ''}
+            `}
 
             <!-- Row 4: Live note highlight if present -->
             ${realNotes.length > 0 ? `
@@ -2720,10 +2997,18 @@
 
     function assignActivistFromModal(actId) {
       const standId = document.getElementById('assign-modal-stand-id').value;
+      const shiftId = document.getElementById('assign-modal-shift-id')?.value || null;
       const currentRoster = getCurrentWeekRoster();
       const sData = currentRoster[standId];
       const picked = activistsData.find(a => a.id === actId);
       if (!sData || !picked) return;
+
+      if (shiftId && sData.shifts) {
+        const sh = sData.shifts.find(s => s.id === shiftId);
+        if (sh && !sh.assignedIds.includes(picked.id)) {
+          sh.assignedIds.push(picked.id);
+        }
+      }
 
       if (!sData.assignedIds.includes(picked.id)) {
         sData.assignedIds.push(picked.id);
@@ -2851,11 +3136,24 @@
 
       standsData.forEach(stand => {
         const sData = currentRoster[stand.id] || { leadMaleId: null, leadFemaleId: null, assignedIds: [], note: '' };
-        const { maleLead } = getStandLeads(stand, sData);
-        const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
-        lines.push(`📍 *${stand.name}* ${stand.hours ? '(' + stand.hours + ')' : ''}:`);
-        lines.push(`   👨 אחראי עמדה: ${maleLead ? maleLead.name + (maleLead.phone ? ' (' + maleLead.phone + ')' : '') : 'טרם שובץ'}`);
-        lines.push(`   👥 צוות: ${assigned.length > 0 ? assigned.map(a => a.name).join(', ') : 'ללא שיבוץ'}`);
+        const hasShifts = Boolean(sData.hasShifts && Array.isArray(sData.shifts) && sData.shifts.length > 0);
+
+        if (hasShifts) {
+          lines.push(`📍 *${stand.name}* (חלוקה למשמרות):`);
+          sData.shifts.forEach((sh, idx) => {
+            const shLead = activistsData.find(a => a.id === sh.leadId);
+            const shAssigned = activistsData.filter(a => sh.assignedIds && sh.assignedIds.includes(a.id));
+            lines.push(`   ⏰ *${sh.name || `משמרת ${idx + 1}`}* (${sh.hours || 'ללא שעה'}):`);
+            lines.push(`      ⭐ אחראי משמרת: ${shLead ? shLead.name + (shLead.phone ? ' (' + shLead.phone + ')' : '') : 'טרם שובץ'}`);
+            lines.push(`      👥 נציגים: ${shAssigned.length > 0 ? shAssigned.map(a => a.name).join(', ') : 'ללא שיבוץ'}`);
+          });
+        } else {
+          const { maleLead } = getStandLeads(stand, sData);
+          const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
+          lines.push(`📍 *${stand.name}* ${stand.hours ? '(' + stand.hours + ')' : ''}:`);
+          lines.push(`   👨 אחראי עמדה: ${maleLead ? maleLead.name + (maleLead.phone ? ' (' + maleLead.phone + ')' : '') : 'טרם שובץ'}`);
+          lines.push(`   👥 צוות: ${assigned.length > 0 ? assigned.map(a => a.name).join(', ') : 'ללא שיבוץ'}`);
+        }
         if (sData.note) lines.push(`   📝 דגשים: ${sData.note}`);
         lines.push('');
       });
@@ -3026,19 +3324,35 @@
       if (inp) inp.value = label;
     }
 
-    function openReflectionForStand(standIdOrName, legacyActivistsStr) {
+    function openReflectionForStand(standIdOrName, legacyActivistsStr, shiftId = null) {
       const stand = standsData.find(s => s.id === standIdOrName || s.name === standIdOrName);
       const currentRoster = getCurrentWeekRoster();
       const sData = stand ? (currentRoster[stand.id] || { assignedIds: [] }) : { assignedIds: [] };
-      const assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
-      const { maleLead } = stand ? getStandLeads(stand, sData) : { maleLead: null };
+      let assigned = activistsData.filter(a => sData.assignedIds && sData.assignedIds.includes(a.id));
+      let { maleLead } = stand ? getStandLeads(stand, sData) : { maleLead: null };
+      let hoursStr = stand && stand.hours ? stand.hours : '';
+
+      const shiftSelect = document.getElementById('modal-ref-shift');
+      if (shiftId && sData.shifts) {
+        const sh = sData.shifts.find(s => s.id === shiftId);
+        if (sh) {
+          if (shiftSelect) shiftSelect.value = sh.id;
+          if (sh.hours) hoursStr = sh.hours;
+          if (sh.leadId) maleLead = activistsData.find(a => a.id === sh.leadId) || maleLead;
+          if (sh.assignedIds && sh.assignedIds.length > 0) {
+            assigned = activistsData.filter(a => sh.assignedIds.includes(a.id));
+          }
+        }
+      } else if (shiftSelect) {
+        shiftSelect.value = 'all';
+      }
 
       document.getElementById('modal-ref-stand').value = stand ? stand.name : standIdOrName;
       document.getElementById('modal-ref-activists').value = assigned.length > 0
         ? assigned.map(a => a.name).join(', ')
         : (legacyActivistsStr || (maleLead ? maleLead.name : ''));
-      if (stand && stand.hours) {
-        document.getElementById('modal-ref-hours').value = stand.hours;
+      if (hoursStr) {
+        document.getElementById('modal-ref-hours').value = hoursStr;
       }
 
       const pillsEl = document.getElementById('modal-ref-interviewee-pills');
@@ -4538,6 +4852,45 @@
 
         const isFull = assigned.length >= (stand.requiredActivists || 2);
 
+        const hasShifts = Boolean(sData.hasShifts && Array.isArray(sData.shifts) && sData.shifts.length > 0);
+
+        let middleContentHtml = '';
+        if (hasShifts) {
+          middleContentHtml = `
+            <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:4px;">
+              ${sData.shifts.map((sh, sIdx) => {
+                const shLead = activistsData.find(a => a.id === sh.leadId);
+                const shAssigned = activistsData.filter(a => sh.assignedIds && sh.assignedIds.includes(a.id));
+                const shLeadPhone = shLead && shLead.phone ? shLead.phone : '';
+                return `
+                  <div style="background:#faf5ff;border:1px solid #d8b4fe;border-radius:6px;padding:4px 6px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;font-size:10px;font-weight:800;color:#581c87;border-bottom:1px solid #f3e8ff;padding-bottom:2px;">
+                      <span>⏰ ${escapeHtml(sh.name || `משמרת ${sIdx + 1}`)} (${escapeHtml(sh.hours || '')})</span>
+                      <span>⭐ אחראי: ${shLead ? escapeHtml(shLead.name) + (shLeadPhone ? ' (' + shLeadPhone + ')' : '') : 'ללא'}</span>
+                    </div>
+                    <div style="font-size:10px;color:#1e293b;">
+                      👥 נציגים: ${shAssigned.length > 0 ? shAssigned.map(a => escapeHtml(a.name)).join(', ') : '<span style="color:#94a3b8;font-style:italic;">אין משובצים</span>'}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+        } else {
+          middleContentHtml = `
+            <!-- Prominent Lead Box -->
+            <div style="background:#fef08a;border:1.5px solid #d97706;border-radius:7px;padding:5px 8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:6px;">
+              <span style="font-size:12px;font-weight:800;color:#0f172a;">⭐ אחראי: ${maleLead ? escapeHtml(maleLead.name) : '<span style="color:#b45309;font-weight:600;">טרם מונה</span>'}</span>
+              ${maleLead && maleLead.phone ? `<span dir="ltr" style="font-family:monospace;font-size:12px;font-weight:800;color:#0f172a;background:#fff;padding:1px 6px;border-radius:5px;border:1px solid #d97706;">${escapeHtml(maleLead.phone)}</span>` : ''}
+            </div>
+
+            <!-- Assigned Team -->
+            <div style="margin-bottom:4px;">
+              ${assignedList}
+            </div>
+          `;
+        }
+
         return `
           <div style="border:1.5px solid ${isNoAnswer ? '#dc2626' : '#94a3b8'};border-radius:10px;overflow:hidden;background:#fff;break-inside:avoid;display:flex;flex-direction:column;justify-content:space-between;">
             <div>
@@ -4554,17 +4907,7 @@
 
               <div style="padding:6px 9px;">
                 ${cleanAddress ? `<div style="font-size:9.5px;color:#475569;margin-bottom:5px;">📍 ${escapeHtml(cleanAddress)}</div>` : ''}
-
-                <!-- Prominent Lead Box -->
-                <div style="background:#fef08a;border:1.5px solid #d97706;border-radius:7px;padding:5px 8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:6px;">
-                  <span style="font-size:12px;font-weight:800;color:#0f172a;">⭐ אחראי: ${maleLead ? escapeHtml(maleLead.name) : '<span style="color:#b45309;font-weight:600;">טרם מונה</span>'}</span>
-                  ${maleLead && maleLead.phone ? `<span dir="ltr" style="font-family:monospace;font-size:12px;font-weight:800;color:#0f172a;background:#fff;padding:1px 6px;border-radius:5px;border:1px solid #d97706;">${escapeHtml(maleLead.phone)}</span>` : ''}
-                </div>
-
-                <!-- Assigned Team -->
-                <div style="margin-bottom:4px;">
-                  ${assignedList}
-                </div>
+                ${middleContentHtml}
               </div>
             </div>
 
