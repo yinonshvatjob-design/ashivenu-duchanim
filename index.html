@@ -725,6 +725,7 @@
             <label class="block font-bold text-slate-700 mb-1">זמינות לליל שישי הקרוב</label>
             <select id="edit-act-sms" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-semibold">
               <option value="true">✅ זמין לחמישי הקרוב</option>
+              <option value="tour">🚶 מגיע לסיור (פוטנציאלי)</option>
               <option value="false">⏳ טרם אישר הגעה השבוע</option>
             </select>
           </div>
@@ -1599,7 +1600,21 @@
           }
         }
 
-        const isVerifiedThisWeek = isActivistVerifiedForWeek(act, currentWeekId, currentRoster);
+        const availState = getActivistAvailabilityStateForWeek(act, currentWeekId, currentRoster);
+        const isPotentialAct = act.category === 'potential';
+        const availBtnCls = availState === true
+          ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+          : availState === 'tour'
+            ? 'bg-purple-50 hover:bg-purple-100 text-purple-800 border-purple-300'
+            : 'bg-amber-50 hover:bg-emerald-50 text-amber-800 hover:text-emerald-800 border-amber-300 hover:border-emerald-300';
+        const availBtnLabel = availState === true
+          ? '✅ זמין לחמישי'
+          : availState === 'tour'
+            ? '🚶 מגיע לסיור'
+            : '⏳ טרם אישר';
+        const availBtnTitle = isPotentialAct
+          ? 'לחץ להחלפת סטטוס: טרם אישר ➔ מגיע לסיור ➔ זמין לחמישי'
+          : (availState === true ? 'לחץ להחלפה ל: טרם אישר (לשבוע זה)' : 'לחץ לאישור מהיר: זמין לחמישי (לשבוע זה)');
 
         return `
           <div class="bg-white rounded-2xl border ${isOpen ? 'border-amber-400/80 shadow-md ring-1 ring-amber-400/20' : 'border-slate-200/80 shadow-xs hover:border-slate-300'} transition overflow-hidden">
@@ -1638,8 +1653,8 @@
               <!-- Quick Badges & Arrow -->
               <div class="flex items-center gap-2 sm:gap-3 text-xs">
                 
-                <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${isVerifiedThisWeek ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-50 hover:bg-emerald-50 text-amber-800 hover:text-emerald-800 border-amber-300 hover:border-emerald-300'}" title="${isVerifiedThisWeek ? 'לחץ להחלפה ל: טרם אישר (לשבוע זה)' : 'לחץ לאישור מהיר: זמין לחמישי (לשבוע זה)'}">
-                  <span>${isVerifiedThisWeek ? '✅ זמין לחמישי' : '⏳ טרם אישר'}</span>
+                <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${availBtnCls}" title="${availBtnTitle}">
+                  <span>${availBtnLabel}</span>
                 </button>
 
                 ${assignedStandName ? `
@@ -1679,12 +1694,12 @@
                   <div class="bg-white p-3 rounded-xl border border-slate-200/60 space-y-1.5">
                     <div class="flex items-center justify-between gap-2">
                       <span class="text-[10px] font-bold text-slate-400">זמינות לליל שישי הקרוב:</span>
-                      <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[10.5px] font-bold px-2 py-0.5 rounded-lg border transition cursor-pointer ${isVerifiedThisWeek ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-700'}">
-                        ${isVerifiedThisWeek ? '↩ סמן טרם אישר' : '✅ סמן זמין לחמישי'}
+                      <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[10.5px] font-bold px-2 py-0.5 rounded-lg border transition cursor-pointer ${availState === true ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200' : availState === 'tour' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-700' : (isPotentialAct ? 'bg-purple-600 hover:bg-purple-500 text-white border-purple-700' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-700')}">
+                        ${availState === true ? '↩ סמן טרם אישר' : availState === 'tour' ? '✅ סמן זמין לחמישי' : (isPotentialAct ? '🚶 סמן מגיע לסיור' : '✅ סמן זמין לחמישי')}
                       </button>
                     </div>
-                    <div class="font-semibold ${isVerifiedThisWeek ? 'text-emerald-700' : 'text-amber-700'}">
-                      ${isVerifiedThisWeek ? (assignedStandName ? 'זמין ואישר (משובץ השבוע בעמדה)' : 'זמין ואישר הגעה למשמרת') : 'טרם אישר זמינות השבוע'}
+                    <div class="font-semibold ${availState === true ? 'text-emerald-700' : availState === 'tour' ? 'text-purple-700' : 'text-amber-700'}">
+                      ${availState === true ? (assignedStandName ? 'זמין ואישר (משובץ השבוע בעמדה)' : 'זמין ואישר הגעה למשמרת') : availState === 'tour' ? 'מגיע לסיור היכרות בליל שישי' : 'טרם אישר זמינות השבוע'}
                     </div>
                     <div class="text-[10px] text-slate-500 pt-1">
                       מספר נייד: <span class="font-mono" dir="ltr">${act.phone || 'לא הוזן'}</span>
@@ -1857,12 +1872,14 @@
       return false;
     }
 
-    function isActivistVerifiedForWeek(act, weekId = getCurrentWeekId(), roster = getCurrentWeekRoster()) {
+    function getActivistAvailabilityStateForWeek(act, weekId = getCurrentWeekId(), roster = getCurrentWeekRoster()) {
       if (!act) return false;
       if (act.weeklySmsVerified && Object.prototype.hasOwnProperty.call(act.weeklySmsVerified, weekId)) {
-        return Boolean(act.weeklySmsVerified[weekId]);
+        const val = act.weeklySmsVerified[weekId];
+        if (val === 'tour' && act.category === 'potential') return 'tour';
+        return val === true;
       }
-      // אם הפעיל משובץ בעמדה (או במשמרת) באותו שבוע — אוטומטית מסומן כזמין/אישר!
+      // אם הפעיל משובץ בעמדה (או במשמרת) באותו שבוע — אוטומטית מסומן כזמין לחמישי!
       if (isActivistAssignedInRoster(act.id, roster)) {
         return true;
       }
@@ -1870,14 +1887,19 @@
       return false;
     }
 
-    function setActivistVerifiedForWeek(actId, verified, weekId = getCurrentWeekId()) {
+    function isActivistVerifiedForWeek(act, weekId = getCurrentWeekId(), roster = getCurrentWeekRoster()) {
+      return getActivistAvailabilityStateForWeek(act, weekId, roster) === true;
+    }
+
+    function setActivistVerifiedForWeek(actId, statusVal, weekId = getCurrentWeekId()) {
       const act = activistsData.find(a => a.id === actId);
       if (!act) return;
       if (!act.weeklySmsVerified || typeof act.weeklySmsVerified !== 'object') {
         act.weeklySmsVerified = {};
       }
-      act.weeklySmsVerified[weekId] = Boolean(verified);
-      act.smsVerified = Boolean(verified);
+      const normalized = (statusVal === 'tour' && act.category === 'potential') ? 'tour' : Boolean(statusVal);
+      act.weeklySmsVerified[weekId] = normalized;
+      act.smsVerified = normalized === true;
     }
 
     function toggleActivistThursdayAvailability(actId, evt) {
@@ -1885,8 +1907,16 @@
       const act = activistsData.find(a => a.id === actId);
       if (!act) return;
       const weekId = getCurrentWeekId();
-      const currentVal = isActivistVerifiedForWeek(act, weekId, getCurrentWeekRoster());
-      setActivistVerifiedForWeek(actId, !currentVal, weekId);
+      const currentState = getActivistAvailabilityStateForWeek(act, weekId, getCurrentWeekRoster());
+      let nextState;
+      if (act.category === 'potential') {
+        // סבב 3 מצבים אצל פוטנציאליים בלבד: טרם אישר -> מגיע לסיור -> זמין לחמישי -> טרם אישר
+        nextState = currentState === false ? 'tour' : currentState === 'tour' ? true : false;
+      } else {
+        // אצל פעילים קיימים: 2 מצבים בלבד (טרם אישר <-> זמין לחמישי)
+        nextState = !currentState;
+      }
+      setActivistVerifiedForWeek(actId, nextState, weekId);
       renderActivistsAccordion();
       syncStateToServer();
     }
@@ -1902,7 +1932,8 @@
       document.getElementById('edit-act-category').value = act.category;
       document.getElementById('edit-act-phone').value = act.phone || '';
       document.getElementById('edit-act-email').value = act.email || '';
-      document.getElementById('edit-act-sms').value = isActivistVerifiedForWeek(act) ? 'true' : 'false';
+      const curAvail = getActivistAvailabilityStateForWeek(act);
+      document.getElementById('edit-act-sms').value = curAvail === 'tour' ? 'tour' : curAvail === true ? 'true' : 'false';
       document.getElementById('edit-act-status').value = act.status;
       document.getElementById('edit-act-preferred-stand').value = act.preferredStand || '';
       const newNoteInp = document.getElementById('modal-new-note-input');
@@ -1927,7 +1958,8 @@
       act.category = document.getElementById('edit-act-category').value;
       act.phone = document.getElementById('edit-act-phone').value.trim();
       act.email = document.getElementById('edit-act-email').value.trim();
-      setActivistVerifiedForWeek(act.id, document.getElementById('edit-act-sms').value === 'true');
+      const smsVal = document.getElementById('edit-act-sms').value;
+      setActivistVerifiedForWeek(act.id, smsVal === 'tour' ? 'tour' : smsVal === 'true');
       act.status = document.getElementById('edit-act-status').value;
       act.preferredStand = document.getElementById('edit-act-preferred-stand').value;
 
