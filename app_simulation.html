@@ -1314,39 +1314,34 @@
     // Expanded accordion state (activist IDs)
     let openAccordionIds = new Set([1]); // First activist open by default
 
-    // Weeks Array with exact Thursday target dates for 100% automatic weekly synchronization
+    // Weeks Array with permanent date-based IDs (w-YYYY-MM-DD) so each week keeps its own clean isolated data forever
     const weeksList = [
-      { id: 'w-prev-8', parasha: 'חול המועד סוכות', name: 'חול המועד סוכות (י"ד תשרי)', date: 'י"ד תשרי • 01/10', thursdayDate: '2026-10-01', label: 'לפני 8 שבועות', status: 'הושלם בעבר' },
-      { id: 'w-prev-7', parasha: 'פרשת בראשית', name: 'פרשת בראשית (כ"א תשרי)', date: 'כ"א תשרי • 08/10', thursdayDate: '2026-10-08', label: 'לפני 7 שבועות', status: 'הושלם בעבר' },
-      { id: 'w-prev-6', parasha: 'פרשת נח', name: 'פרשת נח (כ"ח תשרי)', date: 'כ"ח תשרי • 15/10', thursdayDate: '2026-10-15', label: 'לפני 6 שבועות', status: 'הושלם בעבר' },
-      { id: 'w-prev-5', parasha: 'פרשת לך לך', name: 'פרשת לך לך (ה\' חשוון)', date: 'ה\' חשוון • 22/10', thursdayDate: '2026-10-22', label: 'לפני 5 שבועות', status: 'הושלם בעבר' },
-      { id: 'w-prev-4', parasha: 'פרשת וירא', name: 'פרשת וירא (י"ב חשוון)', date: 'י"ב חשוון • 29/10', thursdayDate: '2026-10-29', label: 'לפני חודש', status: 'הושלם בעבר' },
-      { id: 'w-prev-3', parasha: 'פרשת חיי שרה', name: 'פרשת חיי שרה (י"ט חשוון)', date: 'י"ט חשוון • 05/11', thursdayDate: '2026-11-05', label: 'לפני 3 שבועות', status: 'הושלם בעבר' },
-      { id: 'w-prev-2', parasha: 'פרשת תולדות', name: 'פרשת תולדות (כ"ו חשוון)', date: 'כ"ו חשוון • 12/11', thursdayDate: '2026-11-12', label: 'לפני שבועיים', status: 'הושלם בעבר' },
-      { id: 'w-prev-1', parasha: 'פרשת ויצא', name: 'פרשת ויצא (ג\' כסלו)', date: 'ג\' כסלו • 19/11', thursdayDate: '2026-11-19', label: 'שבוע שעבר', status: 'הושלם בעבר' },
-      
-      // Target Current Week - 26/11/2026 (10 Kislev) - Vayishlach
-      { id: 'w-current', parasha: 'פרשת וישלח', name: 'פרשת וישלח (י\' כסלו)', date: 'י\' כסלו • 26/11', thursdayDate: '2026-11-26', label: 'חמישי הקרוב • נוכחי', status: 'תכנון פעיל' },
-
-      // Future Weeks (Automatically become current when their week arrives)
-      { id: 'w-next-1', parasha: 'פרשת וישב', name: 'פרשת וישב (י"ז כסלו)', date: 'י"ז כסלו • 03/12', thursdayDate: '2026-12-03', label: 'עוד שבוע', status: 'תכנון פתוח' },
-      { id: 'w-next-2', parasha: 'פרשת מקץ', name: 'פרשת מקץ • חנוכה (כ"ד כסלו)', date: 'כ"ד כסלו • 10/12', thursdayDate: '2026-12-10', label: 'עוד שבועיים', status: 'תכנון פתוח' },
-      { id: 'w-next-3', parasha: 'פרשת ויגש', name: 'פרשת ויגש (ב\' טבת)', date: 'ב\' טבת • 17/12', thursdayDate: '2026-12-17', label: 'עוד 3 שבועות', status: 'תכנון פתוח' },
-      { id: 'w-next-4', parasha: 'פרשת ויחי', name: 'פרשת ויחי (ט\' טבת)', date: 'ט\' טבת • 24/12', thursdayDate: '2026-12-24', label: 'עוד חודש', status: 'תכנון פתוח' },
-      { id: 'w-next-5', parasha: 'פרשת שמות', name: 'פרשת שמות (ט"ז טבת)', date: 'ט"ז טבת • 31/12', thursdayDate: '2026-12-31', label: 'עוד 5 שבועות', status: 'תכנון פתוח' },
-      { id: 'w-next-6', parasha: 'פרשת וארא', name: 'פרשת וארא (כ"ג טבת)', date: 'כ"ג טבת • 07/01', thursdayDate: '2027-01-07', label: 'עוד 6 שבועות', status: 'תכנון פתוח' },
-      { id: 'w-next-7', parasha: 'פרשת בא', name: 'פרשת בא (א\' שבט)', date: 'א\' שבט • 14/01', thursdayDate: '2027-01-14', label: 'עוד 7 שבועות', status: 'תכנון פתוח' },
-      { id: 'w-next-8', parasha: 'פרשת בשלח', name: 'פרשת בשלח (ח\' שבט)', date: 'ח\' שבט • 21/01', thursdayDate: '2027-01-21', label: 'עוד חודשיים', status: 'תכנון פתוח' },
-      { id: 'w-next-9', parasha: 'פרשת יתרו', name: 'פרשת יתרו (ט"ו שבט)', date: 'ט"ו שבט • 28/01', thursdayDate: '2027-01-28', label: 'עוד 9 שבועות', status: 'תכנון פתוח' },
-      { id: 'w-next-10', parasha: 'פרשת משפטים', name: 'פרשת משפטים (כ"ב שבט)', date: 'כ"ב שבט • 04/02', thursdayDate: '2027-02-04', label: 'עוד 10 שבועות', status: 'תכנון פתוח' }
+      { id: 'w-2026-10-01', parasha: 'חול המועד סוכות', name: 'חול המועד סוכות (י"ד תשרי)', date: 'י"ד תשרי • 01/10', thursdayDate: '2026-10-01', label: 'ארכיון', status: 'הושלם בעבר' },
+      { id: 'w-2026-10-08', parasha: 'פרשת בראשית', name: 'פרשת בראשית (כ"א תשרי)', date: 'כ"א תשרי • 08/10', thursdayDate: '2026-10-08', label: 'ארכיון', status: 'הושלם בעבר' },
+      { id: 'w-2026-10-15', parasha: 'פרשת נח', name: 'פרשת נח (כ"ח תשרי)', date: 'כ"ח תשרי • 15/10', thursdayDate: '2026-10-15', label: 'ארכיון', status: 'הושלם בעבר' },
+      { id: 'w-2026-10-22', parasha: 'פרשת לך לך', name: 'פרשת לך לך (ה\' חשוון)', date: 'ה\' חשוון • 22/10', thursdayDate: '2026-10-22', label: 'ארכיון', status: 'הושלם בעבר' },
+      { id: 'w-2026-10-29', parasha: 'פרשת וירא', name: 'פרשת וירא (י"ב חשוון)', date: 'י"ב חשוון • 29/10', thursdayDate: '2026-10-29', label: 'ארכיון', status: 'הושלם בעבר' },
+      { id: 'w-2026-11-05', parasha: 'פרשת חיי שרה', name: 'פרשת חיי שרה (י"ט חשוון)', date: 'י"ט חשוון • 05/11', thursdayDate: '2026-11-05', label: 'ארכיון', status: 'הושלם בעבר' },
+      { id: 'w-2026-11-12', parasha: 'פרשת תולדות', name: 'פרשת תולדות (כ"ו חשוון)', date: 'כ"ו חשוון • 12/11', thursdayDate: '2026-11-12', label: 'לפני שבועיים', status: 'הושלם בעבר' },
+      { id: 'w-2026-11-19', parasha: 'פרשת ויצא', name: 'פרשת ויצא (ג\' כסלו)', date: 'ג\' כסלו • 19/11', thursdayDate: '2026-11-19', label: 'שבוע שעבר', status: 'הושלם בעבר' },
+      { id: 'w-2026-11-26', parasha: 'פרשת וישלח', name: 'פרשת וישלח (י\' כסלו)', date: 'י\' כסלו • 26/11', thursdayDate: '2026-11-26', label: 'חמישי הקרוב • נוכחי', status: 'תכנון פעיל' },
+      { id: 'w-2026-12-03', parasha: 'פרשת וישב', name: 'פרשת וישב (י"ז כסלו)', date: 'י"ז כסלו • 03/12', thursdayDate: '2026-12-03', label: 'עוד שבוע', status: 'תכנון פתוח' },
+      { id: 'w-2026-12-10', parasha: 'פרשת מקץ', name: 'פרשת מקץ • חנוכה (כ"ד כסלו)', date: 'כ"ד כסלו • 10/12', thursdayDate: '2026-12-10', label: 'עוד שבועיים', status: 'תכנון פתוח' },
+      { id: 'w-2026-12-17', parasha: 'פרשת ויגש', name: 'פרשת ויגש (ב\' טבת)', date: 'ב\' טבת • 17/12', thursdayDate: '2026-12-17', label: 'עוד 3 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-2026-12-24', parasha: 'פרשת ויחי', name: 'פרשת ויחי (ט\' טבת)', date: 'ט\' טבת • 24/12', thursdayDate: '2026-12-24', label: 'עוד חודש', status: 'תכנון פתוח' },
+      { id: 'w-2026-12-31', parasha: 'פרשת שמות', name: 'פרשת שמות (ט"ז טבת)', date: 'ט"ז טבת • 31/12', thursdayDate: '2026-12-31', label: 'עוד 5 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-2027-01-07', parasha: 'פרשת וארא', name: 'פרשת וארא (כ"ג טבת)', date: 'כ"ג טבת • 07/01', thursdayDate: '2027-01-07', label: 'עוד 6 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-2027-01-14', parasha: 'פרשת בא', name: 'פרשת בא (א\' שבט)', date: 'א\' שבט • 14/01', thursdayDate: '2027-01-14', label: 'עוד 7 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-2027-01-21', parasha: 'פרשת בשלח', name: 'פרשת בשלח (ח\' שבט)', date: 'ח\' שבט • 21/01', thursdayDate: '2027-01-21', label: 'עוד חודשיים', status: 'תכנון פתוח' },
+      { id: 'w-2027-01-28', parasha: 'פרשת יתרו', name: 'פרשת יתרו (ט"ו שבט)', date: 'ט"ו שבט • 28/01', thursdayDate: '2027-01-28', label: 'עוד 9 שבועות', status: 'תכנון פתוח' },
+      { id: 'w-2027-02-04', parasha: 'פרשת משפטים', name: 'פרשת משפטים (כ"ב שבט)', date: 'כ"ב שבט • 04/02', thursdayDate: '2027-02-04', label: 'עוד 10 שבועות', status: 'תכנון פתוח' }
     ];
 
     // Automatic Weekly Synchronizer: Detects current week dynamically by real-world calendar date
     function getAutoCurrentWeekIndex() {
       const now = new Date();
       const day = now.getDay(); // 0 = Sunday ... 4 = Thursday, 5 = Friday, 6 = Saturday
-      // From Sunday to Thursday -> targets this Thursday. On Friday/Saturday -> maintains Thursday of this weekend cycle.
-      const diffToThursday = (day <= 4) ? (4 - day) : (4 - day);
+      const diffToThursday = 4 - day;
       const targetThursday = new Date(now);
       targetThursday.setDate(now.getDate() + diffToThursday);
       targetThursday.setHours(12, 0, 0, 0);
@@ -1364,6 +1359,65 @@
         }
       });
       return bestIdx;
+    }
+
+    // Update dynamic relative labels based on today's week
+    (function refreshDynamicWeekLabels() {
+      const autoIdx = getAutoCurrentWeekIndex();
+      weeksList.forEach((w, idx) => {
+        const diff = idx - autoIdx;
+        if (diff === 0) { w.label = 'חמישי הקרוב • נוכחי'; w.status = 'תכנון פעיל'; }
+        else if (diff === -1) { w.label = 'שבוע שעבר'; w.status = 'הושלם בעבר'; }
+        else if (diff === -2) { w.label = 'לפני שבועיים'; w.status = 'הושלם בעבר'; }
+        else if (diff < -2) { w.label = `לפני ${Math.abs(diff)} שבועות`; w.status = 'הושלם בעבר'; }
+        else if (diff === 1) { w.label = 'עוד שבוע'; w.status = 'תכנון פתוח'; }
+        else if (diff === 2) { w.label = 'עוד שבועיים'; w.status = 'תכנון פתוח'; }
+        else { w.label = `עוד ${diff} שבועות`; w.status = 'תכנון פתוח'; }
+      });
+    })();
+
+    // One-time safe migration: maps old relative keys (where w-current was Vayetze 19/11) to permanent date-based IDs
+    const LEGACY_WEEK_ID_MAP = {
+      'w-prev-7': 'w-2026-10-01',
+      'w-prev-6': 'w-2026-10-08',
+      'w-prev-5': 'w-2026-10-15',
+      'w-prev-4': 'w-2026-10-22',
+      'w-prev-3': 'w-2026-10-29',
+      'w-prev-2': 'w-2026-11-05',
+      'w-prev-1': 'w-2026-11-12',
+      'w-current': 'w-2026-11-19',
+      'w-next-1': 'w-2026-11-26',
+      'w-next-2': 'w-2026-12-03',
+      'w-next-3': 'w-2026-12-10',
+      'w-next-4': 'w-2026-12-17',
+      'w-next-5': 'w-2026-12-24',
+      'w-next-6': 'w-2026-12-31',
+      'w-next-7': 'w-2027-01-07',
+      'w-next-8': 'w-2027-01-14'
+    };
+
+    function migrateLegacyWeekIdsIfNeeded() {
+      let migrated = false;
+      if (weeklyRosters && typeof weeklyRosters === 'object') {
+        for (const [oldKey, newKey] of Object.entries(LEGACY_WEEK_ID_MAP)) {
+          if (Object.prototype.hasOwnProperty.call(weeklyRosters, oldKey)) {
+            if (!weeklyRosters[newKey] || Object.keys(weeklyRosters[newKey]).length === 0) {
+              weeklyRosters[newKey] = weeklyRosters[oldKey];
+            }
+            delete weeklyRosters[oldKey];
+            migrated = true;
+          }
+        }
+      }
+      if (Array.isArray(reflectionsData)) {
+        reflectionsData.forEach(r => {
+          if (r && r.weekId && LEGACY_WEEK_ID_MAP[r.weekId]) {
+            r.weekId = LEGACY_WEEK_ID_MAP[r.weekId];
+            migrated = true;
+          }
+        });
+      }
+      return migrated;
     }
 
     let currentWeekIndex = getAutoCurrentWeekIndex();
@@ -2284,14 +2338,24 @@
       if (confirm(`האם להעמיד את נציגי ואחראי/ות השבוע הקודם (${prevWeek.name}) כברירת מחדל לשבוע זה (${currentWeek.name})?`)) {
         const currentRoster = getCurrentWeekRoster();
         for (const [standId, data] of Object.entries(prevRoster)) {
+          const clonedShifts = data.shifts
+            ? JSON.parse(JSON.stringify(data.shifts)).map(sh => ({
+                ...sh,
+                leadContactStatus: null,
+                leadContactUpdatedAt: ''
+              }))
+            : null;
           currentRoster[standId] = {
             leadMaleId: data.leadMaleId || null,
             leadFemaleId: data.leadFemaleId || null,
             leadId: data.leadId || null,
+            leadContactStatus: null,
+            leadContactUpdatedAt: '',
             assignedIds: [...(data.assignedIds || [])],
             hasShifts: Boolean(data.hasShifts),
-            shifts: data.shifts ? JSON.parse(JSON.stringify(data.shifts)) : null,
-            note: 'הועתק כברירת מחדל משבוע שעבר'
+            shifts: clonedShifts,
+            note: '',
+            noteLog: []
           };
         }
         renderStandsRoster();
@@ -4739,6 +4803,9 @@
             if (Array.isArray(data.appData.reflectionsData)) reflectionsData = data.appData.reflectionsData;
             if (Array.isArray(data.appData.leadsData)) leadsData = data.appData.leadsData;
             if (Array.isArray(data.appData.tasksData)) tasksData = data.appData.tasksData;
+            if (migrateLegacyWeekIdsIfNeeded()) {
+              syncStateToServer();
+            }
           }
         }
       } catch (e) {
@@ -4753,6 +4820,7 @@
           if (Array.isArray(parsed.reflectionsData)) reflectionsData = parsed.reflectionsData;
           if (Array.isArray(parsed.leadsData)) leadsData = parsed.leadsData;
           if (Array.isArray(parsed.tasksData)) tasksData = parsed.tasksData;
+          migrateLegacyWeekIdsIfNeeded();
         }
       }
     }
@@ -5302,6 +5370,7 @@
         if (Array.isArray(data.appData.reflectionsData)) reflectionsData = data.appData.reflectionsData;
         if (Array.isArray(data.appData.leadsData)) leadsData = data.appData.leadsData;
         if (Array.isArray(data.appData.tasksData)) tasksData = data.appData.tasksData;
+        migrateLegacyWeekIdsIfNeeded();
 
         localStorage.setItem('ashivenu_v2_app_data', JSON.stringify(data.appData));
         renderFloatingTasks();
