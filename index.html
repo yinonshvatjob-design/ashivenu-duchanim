@@ -4108,24 +4108,26 @@
       };
     }
 
+    function formatHebrewDateOnly(dateStr) {
+      return String(dateStr || '')
+        .replace(/\s*[•\-–|]\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\s*/g, '')
+        .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, '')
+        .trim();
+    }
+
     function renderParashaSheetContent(sheet) {
       const body = document.getElementById('parasha-sheet-body');
       if (!body) return;
+      const hebrewDate = formatHebrewDateOnly(sheet.date);
 
       body.innerHTML = `
         <div id="parasha-sheet-card" class="bg-white rounded-2xl border-2 border-purple-200/90 shadow-md p-5 sm:p-7 space-y-5 text-slate-800 text-xs sm:text-[13px] leading-relaxed">
           
           <!-- Sheet Header Banner -->
-          <div class="border-b-2 border-slate-900 pb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div class="text-[11px] font-black uppercase tracking-wider text-purple-900">השיבנו — דוכני שיח, זהות וקירוב לבבות</div>
-              <h2 class="text-base sm:text-lg font-black text-slate-950 mt-0.5">דף הכנה פדגוגי למשמרת ליל שישי • ${escapeHtml(formatParashaTitle(sheet.parasha))}</h2>
-              <div class="text-[11px] text-slate-500 font-semibold">${escapeHtml(sheet.date || '')} • מחזור פעילות תשפ"ז</div>
-            </div>
-            <div class="bg-purple-50 border border-purple-200 text-purple-950 font-bold px-3 py-1.5 rounded-xl text-xs text-center">
-              <div>תורת הראי"ה קוק זצ"ל</div>
-              <div class="text-[10px] text-purple-700">בשילוב רפלקציות מהשטח</div>
-            </div>
+          <div class="border-b-2 border-slate-900 pb-3">
+            <div class="text-[11px] font-black uppercase tracking-wider text-purple-900">השיבנו — דוכני שיח, זהות וקירוב לבבות</div>
+            <h2 class="text-base sm:text-lg font-black text-slate-950 mt-0.5">דף הכנה פדגוגי למשמרת ליל שישי • ${escapeHtml(formatParashaTitle(sheet.parasha))}</h2>
+            <div class="text-[11px] text-slate-500 font-semibold">${escapeHtml(hebrewDate)}${hebrewDate ? ' • ' : ''}תשפ"ז</div>
           </div>
 
           <!-- Main Article Title -->
@@ -4288,41 +4290,39 @@
     function printParashaSheetPdf() {
       const sheet = collectEditedSheetData() || lastGeneratedParashaSheet;
       if (!sheet) return;
+      const hebrewDate = formatHebrewDateOnly(sheet.date);
 
       const html = `
         <style>
-          @page { size: A4 portrait; margin: 10mm 12mm; }
-          body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; direction: rtl; color: #0f172a; line-height: 1.45; font-size: 11.5px; }
-          .sheet-container { border: 2px solid #581c87; border-radius: 12px; padding: 16px 20px; }
-          .header-box { border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
-          .inst-title { font-size: 11px; font-weight: 900; color: #581c87; text-transform: uppercase; letter-spacing: 0.5px; }
-          .main-title { font-size: 17px; font-weight: 900; margin: 2px 0; color: #020617; }
-          .sub-meta { font-size: 10.5px; color: #475569; font-weight: 600; }
-          .title-banner { background: #0f172a; color: #ffffff; padding: 7px 12px; border-radius: 8px; margin-bottom: 10px; font-weight: 800; font-size: 13.5px; }
-          .parasha-box { background: #fffbeb; border-right: 4px solid #f59e0b; padding: 7px 10px; border-radius: 6px; margin-bottom: 10px; font-size: 11.5px; }
-          .quote-box { background: #faf5ff; border: 1px solid #d8b4fe; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
-          .quote-header { font-size: 11px; font-weight: 800; color: #581c87; margin-bottom: 4px; display: flex; justify-content: space-between; }
-          .quote-text { font-style: italic; font-weight: 600; color: #3b0764; border-right: 3px solid #9333ea; padding-right: 8px; font-size: 12px; }
-          .insight-box { margin-bottom: 10px; font-size: 11.5px; text-align: justify; }
-          .section-heading { font-size: 12px; font-weight: 900; color: #020617; margin-bottom: 3px; }
-          .reflection-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
-          .takeaways-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 9px 12px; margin-bottom: 10px; }
-          .takeaways-box ul { margin: 4px 0 0 0; padding-right: 18px; }
-          .takeaways-box li { margin-bottom: 3px; font-weight: 600; color: #064e3b; }
-          .blessing-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; text-align: center; font-size: 11px; font-weight: 600; color: #1e293b; }
+          @page { size: A4 portrait; margin: 9mm 11mm; }
+          * { box-sizing: border-box; }
+          body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; direction: rtl; color: #0f172a; line-height: 1.6; font-size: 13.5px; margin: 0; padding: 0; }
+          .sheet-container { border: 2.5px solid #581c87; border-radius: 14px; padding: 20px 24px; min-height: 274mm; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
+          .header-box { border-bottom: 2.5px solid #0f172a; padding-bottom: 10px; }
+          .inst-title { font-size: 12px; font-weight: 900; color: #581c87; letter-spacing: 0.4px; }
+          .main-title { font-size: 20px; font-weight: 900; margin: 3px 0; color: #020617; }
+          .sub-meta { font-size: 12px; color: #475569; font-weight: 700; }
+          .title-banner { background: #0f172a; color: #ffffff; padding: 10px 15px; border-radius: 10px; font-weight: 800; font-size: 15.5px; }
+          .parasha-box { background: #fffbeb; border-right: 4.5px solid #f59e0b; padding: 10px 14px; border-radius: 8px; font-size: 13.5px; }
+          .quote-box { background: #faf5ff; border: 1.5px solid #d8b4fe; border-radius: 10px; padding: 12px 15px; }
+          .quote-header { font-size: 12.5px; font-weight: 800; color: #581c87; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+          .quote-book { background: #ffffff; border: 1px solid #d8b4fe; border-radius: 6px; padding: 2px 8px; font-size: 11.5px; color: #6b21a8; }
+          .quote-text { font-style: italic; font-weight: 700; color: #3b0764; border-right: 3.5px solid #9333ea; padding-right: 11px; font-size: 14px; line-height: 1.65; }
+          .insight-box { font-size: 13.5px; text-align: justify; line-height: 1.65; white-space: pre-line; }
+          .section-heading { font-size: 14px; font-weight: 900; color: #020617; margin-bottom: 5px; }
+          .reflection-box { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 11px 14px; }
+          .takeaways-box { background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 10px; padding: 12px 15px; }
+          .takeaways-box ul { margin: 6px 0 0 0; padding-right: 20px; }
+          .takeaways-box li { margin-bottom: 6px; font-weight: 600; color: #064e3b; font-size: 13px; line-height: 1.55; }
+          .takeaways-box li:last-child { margin-bottom: 0; }
+          .blessing-box { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 14px; text-align: center; font-size: 13px; font-weight: 700; color: #1e293b; }
         </style>
 
         <div class="sheet-container">
           <div class="header-box">
-            <div>
-              <div class="inst-title">השיבנו — דוכני שיח וזהות יהודית בירושלים</div>
-              <div class="main-title">דף הכנה שבועי לנציגי השטח • ${escapeHtml(formatParashaTitle(sheet.parasha))}</div>
-              <div class="sub-meta">${escapeHtml(sheet.date || '')} • לקראת משמרת ליל שישי</div>
-            </div>
-            <div style="text-align: left; font-size: 10.5px; font-weight: bold; color: #581c87;">
-              <div>תורת מרן הראי"ה קוק זצ"ל</div>
-              <div style="color: #64748b;">רפלקציות אמיתיות מהשטח</div>
-            </div>
+            <div class="inst-title">השיבנו — דוכני שיח וזהות יהודית בירושלים</div>
+            <div class="main-title">דף הכנה שבועי לנציגי השטח • ${escapeHtml(formatParashaTitle(sheet.parasha))}</div>
+            <div class="sub-meta">${escapeHtml(hebrewDate)}${hebrewDate ? ' תשפ"ז • ' : ''}לקראת משמרת ליל שישי</div>
           </div>
 
           <div class="title-banner">
@@ -4336,7 +4336,7 @@
           <div class="quote-box">
             <div class="quote-header">
               <span>🕯️ נר לרגלינו — מדברי ${escapeHtml(sheet.sourceQuote?.author || 'מרן הראי"ה קוק זצ"ל')}</span>
-              <span>${escapeHtml(sheet.sourceQuote?.book || '')}</span>
+              <span class="quote-book">${escapeHtml(sheet.sourceQuote?.book || '')}</span>
             </div>
             <div class="quote-text">
               "${escapeHtml(sheet.sourceQuote?.text || '')}"
@@ -4350,13 +4350,13 @@
 
           ${sheet.featuredReflection ? `
             <div class="reflection-box">
-              <div style="font-weight: 900; font-size: 11px; color: #1e3a8a; margin-bottom: 2px;">
+              <div style="font-weight: 900; font-size: 13px; color: #1e3a8a; margin-bottom: 4px;">
                 📍 קולות מהשטח (עמדת ${escapeHtml(sheet.featuredReflection.stand)} | נציגים: ${escapeHtml(sheet.featuredReflection.activist)}):
               </div>
-              <div style="font-style: italic; color: #172554; font-size: 11px; margin-bottom: 4px;">
+              <div style="font-style: italic; color: #172554; font-size: 13px; margin-bottom: 6px; line-height: 1.55;">
                 "${escapeHtml(sheet.featuredReflection.story)}"
               </div>
-              <div style="font-size: 10.5px; font-weight: 700; color: #1e3a8a;">
+              <div style="font-size: 12.5px; font-weight: 700; color: #1e3a8a;">
                 💡 הלקח לעמדה הערב: ${escapeHtml(sheet.featuredReflection.lesson)}
               </div>
             </div>
@@ -4375,7 +4375,7 @@
         </div>
       `;
 
-      openPrintWindow(`דף הכנה שבועי - פרשת ${sheet.parasha}`, html, false);
+      openPrintWindow(`דף הכנה שבועי - ${formatParashaTitle(sheet.parasha)}`, html, false);
     }
 
 
