@@ -1615,11 +1615,11 @@
               </div>
 
               <!-- Quick Badges & Arrow -->
-              <div class="flex items-center gap-3 text-xs">
+              <div class="flex items-center gap-2 sm:gap-3 text-xs">
                 
-                <span class="text-[11px] font-medium hidden sm:flex items-center gap-1 ${act.smsVerified ? 'text-emerald-700' : 'text-slate-400'}">
-                  ${act.smsVerified ? '✅ זמין לחמישי' : '⏳ טרם אישר'}
-                </span>
+                <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${act.smsVerified ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-50 hover:bg-emerald-50 text-amber-800 hover:text-emerald-800 border-amber-300 hover:border-emerald-300'}" title="${act.smsVerified ? 'לחץ להחלפה ל: טרם אישר' : 'לחץ לאישור מהיר: זמין לחמישי'}">
+                  <span>${act.smsVerified ? '✅ זמין לחמישי' : '⏳ טרם אישר'}</span>
+                </button>
 
                 ${assignedStandName ? `
                   <span class="text-[10px] bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-lg border border-blue-200">
@@ -1655,8 +1655,13 @@
                   </div>
 
                   <!-- Weekly Availability Status -->
-                  <div class="bg-white p-3 rounded-xl border border-slate-200/60 space-y-1">
-                    <span class="text-[10px] font-bold text-slate-400">זמינות לליל שישי הקרוב:</span>
+                  <div class="bg-white p-3 rounded-xl border border-slate-200/60 space-y-1.5">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-[10px] font-bold text-slate-400">זמינות לליל שישי הקרוב:</span>
+                      <button type="button" onclick="toggleActivistThursdayAvailability(${act.id}, event)" class="text-[10.5px] font-bold px-2 py-0.5 rounded-lg border transition cursor-pointer ${act.smsVerified ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-700'}">
+                        ${act.smsVerified ? '↩ סמן טרם אישר' : '✅ סמן זמין לחמישי'}
+                      </button>
+                    </div>
                     <div class="font-semibold ${act.smsVerified ? 'text-emerald-700' : 'text-amber-700'}">
                       ${act.smsVerified ? 'זמין ואישר הגעה למשמרת' : 'טרם אישר זמינות השבוע'}
                     </div>
@@ -1811,6 +1816,15 @@
       syncActivistNotesString(act);
       if (inp) inp.value = '';
       renderModalActivistNotesLog(act);
+    }
+
+    function toggleActivistThursdayAvailability(actId, evt) {
+      if (evt) evt.stopPropagation();
+      const act = activistsData.find(a => a.id === actId);
+      if (!act) return;
+      act.smsVerified = !act.smsVerified;
+      renderActivistsAccordion();
+      syncStateToServer();
     }
 
     // Modal: Full Edit for Activist
